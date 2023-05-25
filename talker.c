@@ -3,23 +3,26 @@
 // Proyecto chattering con uso de pipes
 // Compilación: "gcc talker.c -o talker"
 // Ejecución: "./talker –i idTalker -p pipeNom"
-// Observaciones: el numero maximo de usuarios que pueden estar conectados es 100.
+// Observaciones: el numero maximo de usuarios que pueden estar conectados es
+// 100.
 //
 //  Archivo creado por Juan Diego Echeverry, Santiago Yañez y Nicolás Rincón
 //  Fecha de inicio: 6/05/23
-//  Fecha de finalización: 
+//  Fecha de finalización:
 //*****************************************************************
 
 //*****************************************************************
 // LIBRERIAS INCLUIDAS
 //*****************************************************************
-#include <stdio.h>
 #include <fcntl.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <stdbool.h>
-#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
 
 //*****************************************************************
 // DEFINICION DE VARIABLES GLOBALES
@@ -29,7 +32,6 @@
 int id_talker = 0;
 char *nombre_pipe;
 char *pipe_talker;
-
 
 //*****************************************************************
 // DECLARACIÓN DE VARIABLES
@@ -44,14 +46,14 @@ const int permisosPipe = 0666;
 typedef struct mensaje {
   int id;
   char opcion;
-  char mensaje;
+  char texto[10];
 } mensaje;
 
 //************************************************************************
 // FUNCIONES
 //************************************************************************
 
-//Poner que es la funcion para mostrar el menu
+// Poner que es la funcion para mostrar el menu
 void menu() {
   printf("----------------------\n");
   printf("Menu\n");
@@ -64,7 +66,7 @@ void menu() {
   printf("----------------------\n");
 }
 
-//Valida los argumentos
+// Valida los argumentos
 int validar_args(int argc, char *argv[]) {
   int i_flag_cant = 0;
   int p_flag_cant = 0;
@@ -73,13 +75,14 @@ int validar_args(int argc, char *argv[]) {
 
   if (argc != 5) {
     printf("--------------------------\n");
-    printf("Debe ingresar argumentos de la siguiente  manera: \n ./talker -i ID -p nombrePipe\n");
+    printf("Debe ingresar argumentos de la siguiente  manera: \n ./talker -i "
+           "ID -p nombrePipe\n");
     printf("--------------------------\n");
     return 0;
   }
 
   for (int i = 1; i < argc; i += 2) {
-    //Verificar bandera -i
+    // Verificar bandera -i
     if (strcmp(argv[i], "-i") == 0) {
       // Verificar que no se haya ingresado la bandera -i varias veces
       if (i_flag_cant) {
@@ -107,8 +110,8 @@ int validar_args(int argc, char *argv[]) {
         return 0;
       }
       i_flag_cant = 1;
-    } 
-    //Verificar bandera -p
+    }
+    // Verificar bandera -p
     else if (strcmp(argv[i], "-p") == 0) {
       // Verificar que no se haya ingresado la bandera -p antes
       if (p_flag_cant) {
@@ -127,8 +130,7 @@ int validar_args(int argc, char *argv[]) {
       }
       pipe_name = arg;
       p_flag_cant = 1;
-    } 
-    else {
+    } else {
       printf("--------------------------\n");
       printf("Error: Bandera %s invalida. \n Utilice solo -n y -p \n", argv[i]);
       printf("--------------------------\n");
@@ -136,42 +138,55 @@ int validar_args(int argc, char *argv[]) {
     }
   }
   id_talker = id;
-  nombre_pipe = pipe_name;
+  pipeGeneral = pipe_name;
   return 1;
 }
 
-//Valida el id del talker
-bool registrar() {
-
-}
-
-
+// Valida el id del talker
+bool registrar() {}
 
 //---------------------------------------------------------------------------------------------
-
 
 //*********************************************************************************************************
 // PROGRAMA PRINCIPAL
 //*********************************************************************************************************
 
-
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
+  pid_t pid = getpid();                     //ESTO LO CAMBIE
+  char inputChar;                           //ESTO LO CAMBIE
   int fd1;
   mensaje mensajeGeneral;
-  
-  if(!validar_args(argc, argv)) {
-    return 0;
-  }
-  printf("Se inicia un talker con id %d\n", id_talker);
 
-  while(1){
-    fd1=open(pipeGeneral,O_WRONLY);
-    if(fd1==-1){
-      perror("Error al abrir el pipe");
-      exit(1);
-    }
+  if (!validar_args(argc, argv)) {
+    return 0;
+  }
+
+  printf("Se inicia un talker con id %d y PID  %d\n", id_talker, pid);
+  printf("Nombre pipe del argv: %s\n", pipeGeneral);
+
+  fd1 = open(pipeGeneral, O_WRONLY);
+  if(fd1==-1){
+    perror("Error al abrir el pipe");
+    exit(1);
   }
   
-    return 0;
-}
+  while(1){
+    menu();
+    printf("Elige una opcion: ");
+
+
+    //ESTO LO CAMBIE
+    scanf(" %c", &mensajeGeneral.opcion);
+    while ((inputChar = getchar()) != '\n' && inputChar != EOF);// Descartar los caracteres restantes
+
+    sprintf(mensajeGeneral.texto, "%d", pid); //guarda el pid del proceso 
+    
+    printf("\nOpcion ingresada: %c\n", mensajeGeneral.opcion);
+    //ESTO LO CAMBIE
+
+    
+    write(fd1, &mensajeGeneral, sizeof(mensaje));
+  }
+  close(fd1);
+  return 0;
+} 

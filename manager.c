@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 //*****************************************************************
 // DEFINICION DE VARIABLES GLOBALES
@@ -27,12 +28,13 @@
 int lista_usuarios[MAX_N] = {};
 int talker_num = 0;
 char *pipeGeneral;
+int permisosPipe = 0666;
 
 
 typedef struct mensaje {
   int id;
   char opcion;
-  char mensaje;
+  char texto[10];
 } mensaje;
 
 //*****************************************************************
@@ -165,23 +167,7 @@ int validar_args(int argc, char *argv[]) {
 
 //Funcion para validar que el id del talker es valido
 int registrar(int num) {
-  int num_elementos = 0;
-  for (int i = 0; i < talker_num; i++) {
-    //El usuario ya existe
-    if(lista_usuarios[i] == num) {
-      return 0;
-    }
-    //Se agrega al usuario
-    else if (lista_usuarios[i] == 0) {
-      lista_usuarios[i] = num;
-      return 1;
-    }
-    else {
-      num_elementos++;
-    }
-  }
-  //Esta llena la capacidad
-  return 0;
+  
 }
 
 //Responde si el id es valido o no
@@ -210,18 +196,30 @@ int main(int argc, char *argv[])
   if(!validar_args(argc, argv)) {
     return 0;
   }
+  
   printf("Manager iniciado y el sistema podra tener como maximo %d usuarios\n", talker_num);
 
-  while(1){
-    fd1=open(pipeGeneral, O_RDONLY);
-    if(fd1==-1){
-      perror("Error al crear pipe)");
-    }
-    read(fd1,&mensajeGeneral,sizeof(mensaje));
-    printf("Valor recibido");
-    close(fd1);
+  if(mkfifo(pipeGeneral,permisosPipe)==-1){
+    perror("Error al crear el pipe");
+    exit(1);
+  }
+
+  fd1=open(pipeGeneral, O_RDONLY);
+  if(fd1==-1){
+    perror("Error al abrir el pipe)");
   }
   
+  while(1){
+    read(fd1,&mensajeGeneral,sizeof(mensaje));
+
+    
+    printf("Opcion recibida de PID %s: %c\n",mensajeGeneral.texto, mensajeGeneral.opcion);
+    
+    
+
+  }
+
+  close(fd1);
  
     
   return 0;
