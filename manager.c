@@ -222,9 +222,7 @@ int main(int argc, char *argv[])
     }
     
     printf("Opcion recibida de PID %s: %s",mensajeGeneral.texto, mensajeGeneral.opcion);
-  }
-
-  ;
+  };
  
     
   return 0;
