@@ -30,9 +30,9 @@ int talker_num = 0;
 char *pipeGeneral;
 int permisosPipe = 0666;
 
-
 typedef struct mensaje {
-  int id;
+  int idEnvia;
+  int idRecibe;
   char opcion[200];
   char texto[100];
 } mensaje;
@@ -213,13 +213,6 @@ int main(int argc, char *argv[])
     }
     read(fd1,&mensajeGeneral,sizeof(mensaje));
     close(fd1);
-
-    if (mensajeGeneral.opcion == 'c') {
-      printf("hola");
-    }
-    else {
-      printf("mundo");
-    }
     
     printf("Opcion recibida de PID %s: %s",mensajeGeneral.texto, mensajeGeneral.opcion);
   };

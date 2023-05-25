@@ -44,7 +44,8 @@ const int permisosPipe = 0666;
 // DECLARACION DE ESTRUCTURAS
 //********************************************************************************
 typedef struct mensaje {
-  int id;
+  int idEnvia;
+  int idRecibe;
   char opcion[200];
   char texto[100];
 } mensaje;
@@ -55,15 +56,14 @@ typedef struct mensaje {
 
 // Poner que es la funcion para mostrar el menu
 void menu() {
-  printf("----------------------\n");
-  printf("Menu\n");
+  printf("-----------Menu-----------\n");
   printf("List\n");
   printf("List GID\n");
   printf("Group\n");
   printf("Sent msg id\n");
   printf("Sent msg Gid\n");
   printf("Salir\n");
-  printf("----------------------\n");
+  printf("--------------------------\n");
 }
 
 // Valida los argumentos
@@ -145,6 +145,12 @@ int validar_args(int argc, char *argv[]) {
 // Valida el id del talker
 bool registrar() {}
 
+// Desestructurar solicitud
+void desestructurar(){
+  
+}
+
+
 //---------------------------------------------------------------------------------------------
 
 //*********************************************************************************************************
@@ -155,12 +161,13 @@ int main(int argc, char *argv[]) {
   pid_t pid = getpid();                     
   int fd1;
   mensaje mensajeGeneral;
+  char input[100];
 
   if (!validar_args(argc, argv)) {
     return 0;
   }
 
-  printf("Se inicia un talker con id %d y PID  %d\n", id_talker, pid);
+  printf("Se inicia un talker con id %d y PID %d\n", id_talker, pid);
   printf("Nombre pipe del argv: %s\n", pipeGeneral);
 
   fd1 = open(pipeGeneral, O_WRONLY);
@@ -170,15 +177,31 @@ int main(int argc, char *argv[]) {
   }
   
   while(1){
+    strcpy(input, "");
+    
     menu();
     printf("Elige una opcion: ");
 
+    fgets(input, sizeof(input), stdin);
 
+    sscanf(input, "%s \"%[^\"]\" %d", (char *)&mensajeGeneral.opcion, mensajeGeneral.texto, &mensajeGeneral.idRecibe);
+
+    printf("Opcion ingresada: %s\n", mensajeGeneral.opcion);
+    printf("Texto ingresado: %s\n", mensajeGeneral.texto);
+    printf("Id para enviar ingresado: %d\n", mensajeGeneral.idRecibe);
+    
+    /*
     fgets(mensajeGeneral.opcion, sizeof(mensajeGeneral.opcion), stdin);
 
     sprintf(mensajeGeneral.texto, "%d", pid); //guarda el pid del proceso 
     
     printf("\nOpcion ingresada: %s", mensajeGeneral.opcion);
+
+    */
+
+    
+
+    
     
     write(fd1, &mensajeGeneral, sizeof(mensajeGeneral));
   }
