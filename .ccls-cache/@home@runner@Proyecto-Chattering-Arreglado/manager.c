@@ -204,22 +204,27 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
-  fd1=open(pipeGeneral, O_RDONLY);
-  if(fd1==-1){
-    perror("Error al abrir el pipe)");
-  }
+  
   
   while(1){
+    fd1=open(pipeGeneral, O_RDONLY);
+    if(fd1==-1){
+      perror("Error al abrir el pipe)");
+    }
     read(fd1,&mensajeGeneral,sizeof(mensaje));
+    close(fd1)
 
+    if (mensajeGeneral.opcion == 'c') {
+      printf("hola");
+    }
+    else {
+      printf("mundo");
+    }
     
     printf("Opcion recibida de PID %s: %c\n",mensajeGeneral.texto, mensajeGeneral.opcion);
-    
-    
-
   }
 
-  close(fd1);
+  ;
  
     
   return 0;
