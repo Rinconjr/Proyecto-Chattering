@@ -33,8 +33,8 @@ int permisosPipe = 0666;
 
 typedef struct mensaje {
   int id;
-  char opcion;
-  char texto[10];
+  char opcion[200];
+  char texto[100];
 } mensaje;
 
 //*****************************************************************
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
       perror("Error al abrir el pipe)");
     }
     read(fd1,&mensajeGeneral,sizeof(mensaje));
-    close(fd1)
+    close(fd1);
 
     if (mensajeGeneral.opcion == 'c') {
       printf("hola");
@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
       printf("mundo");
     }
     
-    printf("Opcion recibida de PID %s: %c\n",mensajeGeneral.texto, mensajeGeneral.opcion);
+    printf("Opcion recibida de PID %s: %s",mensajeGeneral.texto, mensajeGeneral.opcion);
   }
 
   ;

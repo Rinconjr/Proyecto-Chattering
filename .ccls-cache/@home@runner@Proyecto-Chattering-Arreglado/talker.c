@@ -45,8 +45,8 @@ const int permisosPipe = 0666;
 //********************************************************************************
 typedef struct mensaje {
   int id;
-  char opcion;
-  char texto[10];
+  char opcion[200];
+  char texto[100];
 } mensaje;
 
 //************************************************************************
@@ -152,8 +152,7 @@ bool registrar() {}
 //*********************************************************************************************************
 
 int main(int argc, char *argv[]) {
-  pid_t pid = getpid();                     //ESTO LO CAMBIE
-  char inputChar;                           //ESTO LO CAMBIE
+  pid_t pid = getpid();                     
   int fd1;
   mensaje mensajeGeneral;
 
@@ -175,17 +174,13 @@ int main(int argc, char *argv[]) {
     printf("Elige una opcion: ");
 
 
-    //ESTO LO CAMBIE
-    scanf(" %c", &mensajeGeneral.opcion);
-    while ((inputChar = getchar()) != '\n' && inputChar != EOF);// Descartar los caracteres restantes
+    fgets(mensajeGeneral.opcion, sizeof(mensajeGeneral.opcion), stdin);
 
     sprintf(mensajeGeneral.texto, "%d", pid); //guarda el pid del proceso 
     
-    printf("\nOpcion ingresada: %c\n", mensajeGeneral.opcion);
-    //ESTO LO CAMBIE
-
+    printf("\nOpcion ingresada: %s", mensajeGeneral.opcion);
     
-    write(fd1, &mensajeGeneral, sizeof(mensaje));
+    write(fd1, &mensajeGeneral, sizeof(mensajeGeneral));
   }
   close(fd1);
   return 0;
