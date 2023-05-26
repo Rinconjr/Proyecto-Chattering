@@ -202,6 +202,28 @@ bool registrar(mensaje mensajeGeneral, pid_t pid) {
 }
 
 
+void recibirRespuesta(mensaje* mensajeGeneral) {
+  char nombrePipe[100];
+  sprintf(nombrePipe, "%s%d", pipeGeneral, id_talker);
+
+  // RECIBIR RESPUESTA DEL MANAGER
+  int fd1;
+  int bytes_read;
+    
+  // Abrir el pipe para leer
+  do {
+    fd1 = open(nombrePipe, O_RDONLY);
+  } while(fd1 == -1);
+    
+  // Leer del pipe
+  bytes_read = read(fd1, mensajeGeneral, sizeof(mensaje));
+  if (bytes_read == -1) {
+    perror("Error al leer del pipe");
+    exit(EXIT_FAILURE);
+  }
+}
+
+
 int obtener_longitud(const char *arreglo) {
     int longitud = 0;
     while (arreglo[longitud] != '\0') {
@@ -225,7 +247,6 @@ void popOpcion(char *opt, char *opcion) {
 int main(int argc, char *argv[]) {
   pid_t pid = getpid();
   char input[100];
-  char opt[100];
   mensaje mensajeGeneral;
 
   if (!validar_args(argc, argv)) {
@@ -265,13 +286,20 @@ int main(int argc, char *argv[]) {
     else{
       printf("Dentro del if Salir\n");
     }
+
+    sprintf(mensajeGeneral.idEnvia, "%d", id_talker);
     
     printf("Texto ingresado: %s\n", mensajeGeneral.texto);
     printf("Id para enviar ingresado: %s\n", mensajeGeneral.idRecibe);
     
     write(fd, &mensajeGeneral, sizeof(mensajeGeneral));
-
     close(fd);
+
+    //RECIBIR RESPUESTA
+    mensaje miMensaje;
+    recibirRespuesta(&miMensaje);
+    printf("%s\n", miMensaje.texto);
+    
   }
   return 0;
 } 

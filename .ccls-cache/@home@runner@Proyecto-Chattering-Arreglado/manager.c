@@ -54,9 +54,7 @@ const char *fifo = "validar";
 //************************************************************************
 // FUNCIONES
 //************************************************************************
-//Funcion list (Listar usuarios conectados) (falta hacerlo)
-void listarUsuarios(char* pipe) {
-}
+
 //Funcion list GID (Listar integrantes de un grupo dado el id del grupo) (falta hacerlo)
 void listarGrupo(char* pipe) {
   
@@ -174,7 +172,7 @@ int registrar(mensaje mensajeGeneral) {
   }
   if(respuesta == 0 && cant_talkers != talker_num) {
     printf("anadiendo usuario %s... \n", mensajeGeneral.idEnvia);
-    lista_usuarios[0] = atoi(mensajeGeneral.idEnvia);
+    lista_usuarios[cant_talkers] = atoi(mensajeGeneral.idEnvia);
     cant_talkers++;
     respuesta = 2;
   }
@@ -216,6 +214,49 @@ int registrar(mensaje mensajeGeneral) {
 }
 
 
+void responderTalker(mensaje mensajeGeneral) {
+  int pipe_fd;
+  char pipeRegreso[100];
+
+  sprintf(pipeRegreso, "%s%s", pipeGeneral, mensajeGeneral.idRecibe);
+
+  //INFORMACION DEL MENSAJE
+  //printf("Nombre pipe %s\n", pipeRegreso);
+  //printf("Nombre quien envia %s\n", mensajeGeneral.idEnvia);
+  //printf("Nombre quien recibe %s\n", mensajeGeneral.idRecibe);
+  //printf("opcion %s\n", mensajeGeneral.opcion);
+  //printf("texto %s\n", mensajeGeneral.texto);
+  //INFORMACION DEL MENSAJE
+
+  //PIPE CON EL TALKER
+    // Crear el pipe no nominal
+    if (mkfifo(pipeRegreso, 0666) == -1) {
+        perror("Error al crear el pipe");
+        exit(EXIT_FAILURE);
+    }
+    
+    // Abrir el pipe para escribir
+    pipe_fd = open(pipeRegreso, O_WRONLY);
+    if (pipe_fd == -1) {
+        perror("Error al abrir el pipe para escribir");
+        exit(EXIT_FAILURE);
+    }
+    
+    // Enviar el mensaje a través del pipe
+    write(pipe_fd, &mensajeGeneral, sizeof(mensajeGeneral));
+    
+    // Cerrar el pipe
+    close(pipe_fd);
+    
+    // Eliminar (unlink) el pipe
+    if (unlink(pipeRegreso) == -1) {
+        perror("Error al eliminar el pipe");
+        exit(EXIT_FAILURE);
+    }
+  //PIPE CON EL TALKER
+  
+}
+
 int obtener_longitud(const char *arreglo) {
     int longitud = 0;
     while (arreglo[longitud] != '\0') {
@@ -227,6 +268,27 @@ int obtener_longitud(const char *arreglo) {
 void popOpcion(char *opt, char *opcion) {
   sscanf(opt, "%s", opcion);
   memmove(opt, opt + strlen(opcion) + 1, strlen(opt) - strlen(opcion));
+}
+
+//Funcion list (Listar usuarios conectados) (falta hacerlo)
+void listarUsuarios(mensaje mensajeGeneral) {
+  char numeroComoCadena[20];
+  strcpy(mensajeGeneral.opcion, "RListar");
+  strcpy(mensajeGeneral.texto, "Los usuarios actualmente en el sistema son: ");
+  
+  
+  for (int i = 0; i < cant_talkers; i++) {
+    sprintf(numeroComoCadena, "%d", lista_usuarios[i]);
+    strcat(mensajeGeneral.texto, numeroComoCadena);
+
+    if(i == cant_talkers-1) {
+      break;
+    }
+    strcat(mensajeGeneral.texto, ",");
+  }
+
+  strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
+  responderTalker(mensajeGeneral);
 }
 
 int main(int argc, char *argv[])
@@ -260,12 +322,22 @@ int main(int argc, char *argv[])
     }
     else if (strcmp(mensajeGeneral.opcion, "List") == 0) {
       printf("Opcion List\n");
+      listarUsuarios(mensajeGeneral);
+      //Esto es para mandar el mensaje de regreso
+      //strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
+      //strcpy(mensajeGeneral.opcion, "llega");
+      //responderTalker(mensajeGeneral);
     }
     else if (strcmp(mensajeGeneral.opcion, "Group") == 0) {
       printf("Opcion Group\n");
     }
     else if (strcmp(mensajeGeneral.opcion, "Sent") == 0) {
       printf("Opcion Sent\n");
+
+      //ESto es de prueba
+      strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
+      strcpy(mensajeGeneral.opcion, "llega");
+      responderTalker(mensajeGeneral);
     }
     else if (strcmp(mensajeGeneral.opcion, "Salir") == 0) {
       printf("Opcion Salir\n");
