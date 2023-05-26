@@ -45,7 +45,7 @@ const int permisosPipe = 0666;
 // DECLARACION DE ESTRUCTURAS
 //********************************************************************************
 typedef struct mensaje {
-  int idEnvia;
+  char idEnvia[20];
   char idRecibe[20];
   char opcion[200];
   char texto[100];
@@ -153,7 +153,7 @@ bool registrar(mensaje mensajeGeneral, pid_t pid) {
     exit(1);
   }
   
-  mensajeGeneral.idEnvia = id_talker;
+  sprintf(mensajeGeneral.idEnvia, "%d", id_talker);
   strcat(mensajeGeneral.idRecibe, "0");
   strcpy(mensajeGeneral.opcion, "registrar");
   sprintf(mensajeGeneral.texto, "%d", pid); //guarda el pid del proceso 
@@ -201,6 +201,21 @@ bool registrar(mensaje mensajeGeneral, pid_t pid) {
   return 0;
 }
 
+
+int obtener_longitud(const char *arreglo) {
+    int longitud = 0;
+    while (arreglo[longitud] != '\0') {
+        longitud++;
+    }
+    return longitud;
+}
+
+void popOpcion(char *opt, char *opcion) {
+  sscanf(opt, "%s", opcion);
+  memmove(opt, opt + strlen(opcion) + 1, strlen(opt) - strlen(opcion));
+}
+
+
 //---------------------------------------------------------------------------------------------
 
 //*********************************************************************************************************
@@ -210,6 +225,7 @@ bool registrar(mensaje mensajeGeneral, pid_t pid) {
 int main(int argc, char *argv[]) {
   pid_t pid = getpid();
   char input[100];
+  char opt[100];
   mensaje mensajeGeneral;
 
   if (!validar_args(argc, argv)) {
@@ -233,10 +249,23 @@ int main(int argc, char *argv[]) {
     printf("Elige una opcion: ");
 
     fgets(input, sizeof(input), stdin);
-
-    sscanf(input, "%s \"%[^\"]\" %s", mensajeGeneral.opcion, mensajeGeneral.texto, mensajeGeneral.idRecibe);
-
+    sscanf(input, "%s", mensajeGeneral.opcion);
     printf("Opcion ingresada: %s\n", mensajeGeneral.opcion);
+
+    if(strcmp(mensajeGeneral.opcion, "List") == 0){
+      sscanf(input, "%*s %19s", mensajeGeneral.idRecibe);
+    }
+    else if(strcmp(mensajeGeneral.opcion, "Group") == 0){
+      sscanf(input, "%*s %19s", mensajeGeneral.idRecibe);
+    }
+    else if(strcmp(mensajeGeneral.opcion, "Sent") == 0){
+      sscanf(input, "%*s \"%99[^\"]\"", mensajeGeneral.texto);
+      sscanf(strrchr(input, '\"') + 1, " %19[^\"] ", mensajeGeneral.idRecibe);
+    }
+    else{
+      printf("Dentro del if Salir\n");
+    }
+    
     printf("Texto ingresado: %s\n", mensajeGeneral.texto);
     printf("Id para enviar ingresado: %s\n", mensajeGeneral.idRecibe);
     

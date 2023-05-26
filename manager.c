@@ -34,7 +34,7 @@ int permisosPipe = 0666;
 
 
 typedef struct mensaje {
-  int idEnvia;
+  char idEnvia[20];
   char idRecibe[20];
   char opcion[200];
   char texto[100];
@@ -56,14 +56,6 @@ const char *fifo = "validar";
 //************************************************************************
 //Funcion list (Listar usuarios conectados) (falta hacerlo)
 void listarUsuarios(char* pipe) {
-  for (int i = 0; i < talker_num; i++) {
-    if(lista_usuarios[i] == 0) {
-      
-    }
-    else {
-      printf("Usuario %d\n", lista_usuarios[i]);
-    }
-  }
 }
 //Funcion list GID (Listar integrantes de un grupo dado el id del grupo) (falta hacerlo)
 void listarGrupo(char* pipe) {
@@ -175,14 +167,14 @@ int registrar(mensaje mensajeGeneral) {
 
   //COMPROBAR SI EL USUARIO EXITE, NO EXISTE O NO HAY ESPACIO
   for (int i = 0; i < cant_talkers; i++) {
-    if(lista_usuarios[i] == mensajeGeneral.idEnvia) {
+    if(lista_usuarios[i] == atoi(mensajeGeneral.idEnvia)) {
       printf("usuario ya existe compañero\n");
       respuesta = 1;
     }
   }
   if(respuesta == 0 && cant_talkers != talker_num) {
-    printf("anadiendo usuario %d... \n", mensajeGeneral.idEnvia);
-    lista_usuarios[0] = mensajeGeneral.idEnvia;
+    printf("anadiendo usuario %s... \n", mensajeGeneral.idEnvia);
+    lista_usuarios[0] = atoi(mensajeGeneral.idEnvia);
     cant_talkers++;
     respuesta = 2;
   }
@@ -190,7 +182,7 @@ int registrar(mensaje mensajeGeneral) {
 
   //LLENAR MENSAJE DE ENVIO
   sprintf(mensajeGeneral.idRecibe, "%d", mensajeGeneral.idEnvia);
-  mensajeGeneral.idEnvia = 0;
+  sprintf(mensajeGeneral.idEnvia, "%d", 0);
   sprintf(mensajeGeneral.opcion, "%d", respuesta);
   //LLENAR MENSAJE DE ENVIO
 
@@ -266,12 +258,24 @@ int main(int argc, char *argv[])
     if (strcmp(mensajeGeneral.opcion, "registrar") == 0) {
       registrar(mensajeGeneral);
     }
+    else if (strcmp(mensajeGeneral.opcion, "List") == 0) {
+      printf("Opcion List\n");
+    }
+    else if (strcmp(mensajeGeneral.opcion, "Group") == 0) {
+      printf("Opcion Group\n");
+    }
+    else if (strcmp(mensajeGeneral.opcion, "Sent") == 0) {
+      printf("Opcion Sent\n");
+    }
+    else if (strcmp(mensajeGeneral.opcion, "Salir") == 0) {
+      printf("Opcion Salir\n");
+    }
     else if (strcmp(mensajeGeneral.opcion, "kill") == 0) { //Listo para hacer
       //code
-      vida=0;
+      vida = 0;
     }
     else {
-      printf("Opcion de PID %s: %s\n",mensajeGeneral.texto, mensajeGeneral.opcion);
+      printf("Opcion de talker %s: %s\n",mensajeGeneral.idEnvia, mensajeGeneral.opcion);
     }
 
     printf(" ");
