@@ -30,6 +30,7 @@
 #define MAX_i 100
 
 int id_talker = 0;
+int fd;
 char *nombre_pipe;
 char *pipe_talker;
 
@@ -45,7 +46,7 @@ const int permisosPipe = 0666;
 //********************************************************************************
 typedef struct mensaje {
   int idEnvia;
-  int idRecibe;
+  char idRecibe[20];
   char opcion[200];
   char texto[100];
 } mensaje;
@@ -56,14 +57,15 @@ typedef struct mensaje {
 
 // Poner que es la funcion para mostrar el menu
 void menu() {
-  printf("-----------Menu-----------\n");
+  printf("----------------------\n");
+  printf("Menu\n");
   printf("List\n");
   printf("List GID\n");
   printf("Group\n");
   printf("Sent msg id\n");
   printf("Sent msg Gid\n");
   printf("Salir\n");
-  printf("--------------------------\n");
+  printf("----------------------\n");
 }
 
 // Valida los argumentos
@@ -143,13 +145,61 @@ int validar_args(int argc, char *argv[]) {
 }
 
 // Valida el id del talker
-bool registrar() {}
-
-// Desestructurar solicitud
-void desestructurar(){
+bool registrar(mensaje mensajeGeneral, pid_t pid) {
+  //Para preguntarle al manager si puede ingresar///////////////////////////
+  fd = open(pipeGeneral, O_WRONLY);
+  if(fd==-1){
+    perror("Error al abrir el pipe");
+    exit(1);
+  }
   
-}
+  mensajeGeneral.idEnvia = id_talker;
+  strcat(mensajeGeneral.idRecibe, "0");
+  strcpy(mensajeGeneral.opcion, "registrar");
+  sprintf(mensajeGeneral.texto, "%d", pid); //guarda el pid del proceso 
+  
+  write(fd, &mensajeGeneral, sizeof(mensajeGeneral));
+  close(fd);
+  //Para preguntarle al manager si puede ingresar//////////////////////////
 
+  //RECIBIR RESPUESTA DEL MANAGER
+  int fd1;
+  int bytes_read;
+    
+  // Abrir el pipe para leer
+  do {
+    fd1 = open(mensajeGeneral.texto, O_RDONLY);
+  } while(fd1 == -1);
+    
+  // Leer del pipe
+  bytes_read = read(fd1,&mensajeGeneral,sizeof(mensaje));
+  if (bytes_read == -1) {
+    perror("Error al leer del pipe");
+    exit(EXIT_FAILURE);
+  }
+    
+  // Mostrar el mensaje recibido
+  printf("Mensaje recibido mi pid es %s y la respuesta es: %s\n", mensajeGeneral.texto, mensajeGeneral.opcion);
+
+  if(strcmp(mensajeGeneral.opcion, "0") == 0) {
+    printf("-------------------------\n");
+    printf("Lo sentimos, no hay espacio que triste\n");
+    printf("-------------------------\n");
+    exit(1);
+  }
+  else if(strcmp(mensajeGeneral.opcion, "1") == 0) {
+    printf("-------------------------\n");
+    printf("Lo sentimos, el id con el que quiere ingresar ya existe\n");
+    printf("-------------------------\n");
+    exit(1);
+  }
+    
+  // Cerrar el pipe
+  close(fd1);
+  //RECIBIR RESPUESTA DEL MANAGER
+  
+  return 0;
+}
 
 //---------------------------------------------------------------------------------------------
 
@@ -158,53 +208,41 @@ void desestructurar(){
 //*********************************************************************************************************
 
 int main(int argc, char *argv[]) {
-  pid_t pid = getpid();                     
-  int fd1;
-  mensaje mensajeGeneral;
+  pid_t pid = getpid();
   char input[100];
+  mensaje mensajeGeneral;
 
   if (!validar_args(argc, argv)) {
     return 0;
   }
-
-  printf("Se inicia un talker con id %d y PID %d\n", id_talker, pid);
-  printf("Nombre pipe del argv: %s\n", pipeGeneral);
-
-  fd1 = open(pipeGeneral, O_WRONLY);
-  if(fd1==-1){
-    perror("Error al abrir el pipe");
-    exit(1);
-  }
+  
+  registrar(mensajeGeneral, pid);
   
   while(1){
-    strcpy(input, "");
+    fd = open(pipeGeneral, O_WRONLY);
+    if(fd==-1){
+      perror("Error al abrir el pipe");
+      exit(1);
+    }
+    
+    memset(mensajeGeneral.opcion, 0, sizeof(mensajeGeneral.opcion));
+    memset(mensajeGeneral.texto, 0, sizeof(mensajeGeneral.texto));
+    memset(mensajeGeneral.idRecibe, 0, sizeof(mensajeGeneral.idRecibe));
     
     menu();
     printf("Elige una opcion: ");
 
     fgets(input, sizeof(input), stdin);
 
-    sscanf(input, "%s \"%[^\"]\" %d", (char *)&mensajeGeneral.opcion, mensajeGeneral.texto, &mensajeGeneral.idRecibe);
+    sscanf(input, "%s \"%[^\"]\" %s", mensajeGeneral.opcion, mensajeGeneral.texto, mensajeGeneral.idRecibe);
 
     printf("Opcion ingresada: %s\n", mensajeGeneral.opcion);
     printf("Texto ingresado: %s\n", mensajeGeneral.texto);
-    printf("Id para enviar ingresado: %d\n", mensajeGeneral.idRecibe);
+    printf("Id para enviar ingresado: %s\n", mensajeGeneral.idRecibe);
     
-    /*
-    fgets(mensajeGeneral.opcion, sizeof(mensajeGeneral.opcion), stdin);
+    write(fd, &mensajeGeneral, sizeof(mensajeGeneral));
 
-    sprintf(mensajeGeneral.texto, "%d", pid); //guarda el pid del proceso 
-    
-    printf("\nOpcion ingresada: %s", mensajeGeneral.opcion);
-
-    */
-
-    
-
-    
-    
-    write(fd1, &mensajeGeneral, sizeof(mensajeGeneral));
+    close(fd);
   }
-  close(fd1);
   return 0;
 } 

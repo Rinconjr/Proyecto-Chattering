@@ -25,14 +25,17 @@
 // DEFINICION DE VARIABLES GLOBALES
 //*****************************************************************
 #define MAX_N 100
+int fd;
 int lista_usuarios[MAX_N] = {};
+int cant_talkers = 0;
 int talker_num = 0;
 char *pipeGeneral;
 int permisosPipe = 0666;
 
+
 typedef struct mensaje {
   int idEnvia;
-  int idRecibe;
+  char idRecibe[20];
   char opcion[200];
   char texto[100];
 } mensaje;
@@ -166,31 +169,79 @@ int validar_args(int argc, char *argv[]) {
 }
 
 //Funcion para validar que el id del talker es valido
-int registrar(int num) {
-  
+int registrar(mensaje mensajeGeneral) {
+  int respuesta = 0;
+  int pipe_fd;
+
+  //COMPROBAR SI EL USUARIO EXITE, NO EXISTE O NO HAY ESPACIO
+  for (int i = 0; i < cant_talkers; i++) {
+    if(lista_usuarios[i] == mensajeGeneral.idEnvia) {
+      printf("usuario ya existe compañero\n");
+      respuesta = 1;
+    }
+  }
+  if(respuesta == 0 && cant_talkers != talker_num) {
+    printf("anadiendo usuario %d... \n", mensajeGeneral.idEnvia);
+    lista_usuarios[0] = mensajeGeneral.idEnvia;
+    cant_talkers++;
+    respuesta = 2;
+  }
+  //COMPROBAR SI EL USUARIO EXITE, NO EXISTE O NO HAY ESPACIO
+
+  //LLENAR MENSAJE DE ENVIO
+  sprintf(mensajeGeneral.idRecibe, "%d", mensajeGeneral.idEnvia);
+  mensajeGeneral.idEnvia = 0;
+  sprintf(mensajeGeneral.opcion, "%d", respuesta);
+  //LLENAR MENSAJE DE ENVIO
+
+  //PIPE CON EL TALKER
+    // Crear el pipe no nominal
+    if (mkfifo(mensajeGeneral.texto, 0666) == -1) {
+        perror("Error al crear el pipe");
+        exit(EXIT_FAILURE);
+    }
+    
+    // Abrir el pipe para escribir
+    pipe_fd = open(mensajeGeneral.texto, O_WRONLY);
+    if (pipe_fd == -1) {
+        perror("Error al abrir el pipe para escribir");
+        exit(EXIT_FAILURE);
+    }
+    
+    // Enviar el mensaje a través del pipe
+    write(pipe_fd, &mensajeGeneral, sizeof(mensajeGeneral));
+    
+    // Cerrar el pipe
+    close(pipe_fd);
+    
+    // Eliminar (unlink) el pipe
+    if (unlink(mensajeGeneral.texto) == -1) {
+        perror("Error al eliminar el pipe");
+        exit(EXIT_FAILURE);
+    }
+  //PIPE CON EL TALKER
+    return 0;
 }
 
-//Responde si el id es valido o no
-void responder_registro(int n) {
-    int fd;
-    char *fifo = "tmp_validation";
-    mkfifo(fifo, 0666);
-    char arr1[80], arr2[80];
-    fd = open(fifo, O_WRONLY);
-  //El id del talker no es valido
-  if (n == 0) {
-    write(fd, "0", strlen("0")+1);
-  }
-  //El id del talker es valido
-  else {
-    write(fd, "1", strlen("1")+1);
-  }
-  close(fd);
+
+int obtener_longitud(const char *arreglo) {
+    int longitud = 0;
+    while (arreglo[longitud] != '\0') {
+        longitud++;
+    }
+    return longitud;
+}
+
+void popOpcion(char *opt, char *opcion) {
+  sscanf(opt, "%s", opcion);
+  memmove(opt, opt + strlen(opcion) + 1, strlen(opt) - strlen(opcion));
 }
 
 int main(int argc, char *argv[])
-{
-  int fd1;
+{ 
+  int fd;
+  int vida = 1;
+  char opcion[100];
   mensaje mensajeGeneral;
   //Se validan los argumentos
   if(!validar_args(argc, argv)) {
@@ -204,19 +255,33 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
-  
-  
-  while(1){
-    fd1=open(pipeGeneral, O_RDONLY);
-    if(fd1==-1){
+  while(vida){
+    fd=open(pipeGeneral, O_RDONLY);
+    if(fd==-1){
       perror("Error al abrir el pipe)");
     }
-    read(fd1,&mensajeGeneral,sizeof(mensaje));
-    close(fd1);
-    
-    printf("Opcion recibida de PID %s: %s",mensajeGeneral.texto, mensajeGeneral.opcion);
+    read(fd,&mensajeGeneral,sizeof(mensaje));
+    close(fd);
+
+    if (strcmp(mensajeGeneral.opcion, "registrar") == 0) {
+      registrar(mensajeGeneral);
+    }
+    else if (strcmp(mensajeGeneral.opcion, "kill") == 0) { //Listo para hacer
+      //code
+      vida=0;
+    }
+    else {
+      printf("Opcion de PID %s: %s\n",mensajeGeneral.texto, mensajeGeneral.opcion);
+    }
+
+    printf(" ");
   };
- 
+
+  // Eliminar (unlink) el pipe
+    if (unlink(pipeGeneral) == -1) {
+        perror("Error al eliminar el pipe");
+        exit(EXIT_FAILURE);
+    }
     
   return 0;
 }
