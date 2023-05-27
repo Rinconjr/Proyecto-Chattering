@@ -42,7 +42,7 @@ typedef struct usuario {
 }usuario;
 
 typedef struct grupo {
-  char idGrupo[20];
+  //char idGrupo[20];
   int numeroUsuarios;
   char idUsuarios[20];
 }grupo;
@@ -67,11 +67,6 @@ const char *fifo = "validar";
 //************************************************************************
 // FUNCIONES
 //************************************************************************
-
-//Funcion list GID (Listar integrantes de un grupo dado el id del grupo) (falta hacerlo)
-void listarGrupo(char* pipe) {
-  
-}
 
 //sent msg Idi (Enviar mensaje al talker con id N) (falta hacerlo)
 void enviarMsg(char* pipe) {
@@ -297,21 +292,8 @@ void responderTalker(mensaje mensajeGeneral) {
   printf("---------------------------------------------------\n");
 }
 
-int obtener_longitud(const char *arreglo) {
-    int longitud = 0;
-    while (arreglo[longitud] != '\0') {
-        longitud++;
-    }
-    return longitud;
-}
-
-void popOpcion(char *opt, char *opcion) {
-  sscanf(opt, "%s", opcion);
-  memmove(opt, opt + strlen(opcion) + 1, strlen(opt) - strlen(opcion));
-}
-
 //Funcion Group (crea un grupo con los usuarios que se pasen por parametro) (falta hacerlo)
-void crearGrupo(mensaje mensajeGeneral) {
+void crearGrupo(mensaje mensajeGeneral) { //Falta validar que no se puede crear el grupo con un usuario inexistente
   int count = 0;
   char *token = strtok(mensajeGeneral.texto, ", ");
 
@@ -331,6 +313,24 @@ void crearGrupo(mensaje mensajeGeneral) {
   }
   printf("\n");
   cant_grupos++;
+}
+
+//Funcion list GID (Listar integrantes de un grupo dado el id del grupo) (falta hacerlo)
+void listarGrupo(mensaje mensajeGeneral) {
+  int grupoSolicitado;
+
+  printf("Los usuarios en el grupo %s son: \n", mensajeGeneral.idRecibe);
+
+  grupoSolicitado = atoi(&mensajeGeneral.idRecibe[1]);
+  
+  printf("El grupo solicitado es: %d\n", grupoSolicitado);
+
+  /*
+  for(int i=0; i<listaGrupos[grupoSolicitado-1].numeroUsuarios; i++){
+    printf(&listaGrupos[grupoSolicitado].idUsuarios[i]);
+  }
+  */
+  
 }
 
 //Funcion list (Listar usuarios conectados) (falta hacerlo)
@@ -382,20 +382,19 @@ int main(int argc, char *argv[])
     close(fd);
 
 
-    printf("---------------------------------------------------\n");
+    printf("\n---------------------------------------------------\n");
     printf("---------Mensaje recibido------\n");
     printf("IdEnvia: %s\n", mensajeGeneral.idEnvia);
     printf("IdRecibe: %s\n", mensajeGeneral.idRecibe);
     printf("Opcion: %s\n", mensajeGeneral.opcion);
     printf("Texto: %s\n\n", mensajeGeneral.texto);
 
-    
-
     if (strcmp(mensajeGeneral.opcion, "registrar") == 0) {
       registrar(mensajeGeneral);
     }
     else if (strcmp(mensajeGeneral.opcion, "List") == 0) {
       printf("Opcion List\n");
+      //listarGrupo(mensajeGeneral);
       listarUsuarios(mensajeGeneral);
     }
     else if (strcmp(mensajeGeneral.opcion, "kill") == 0) {
@@ -405,7 +404,9 @@ int main(int argc, char *argv[])
       responderTalker(mensajeGeneral);
     }
     else if(strcmp(mensajeGeneral.opcion, "Group") == 0){
-      printf("Opcion Crear Grupo\n");
+      if(strcmp(mensajeGeneral.texto," ")){
+        printf("Opcion Listar Grupo\n");
+      }
       crearGrupo(mensajeGeneral);
     }
     else {
