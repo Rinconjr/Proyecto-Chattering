@@ -68,13 +68,10 @@ const char *fifo = "validar";
 // FUNCIONES
 //************************************************************************
 
-//sent msg Idi (Enviar mensaje al talker con id N) (falta hacerlo)
-void enviarMsg(char* pipe) {
-  
-}
+
 
 //sent msg GroupIdi (Enviar mensaje al grupo de id n) (falta hacerlo)
-void enviarMsgGrupo(char* pipe) {
+void MsgGrupo(mensaje mensajeGeneral) {
   
 }
 
@@ -83,6 +80,9 @@ void salir(mensaje mensajeGeneral) {
   for (int i = 0; i < cant_talkers; i++) {
     if (strcmp(listaUsuarios[i].id, mensajeGeneral.idEnvia) == 0) {
       strcpy(listaUsuarios[i].estado, "0");
+
+      //pid_t pid =listaUsuarios[i].pid;
+      //kill(pid, SIGUSR1);
     }
   }
 }
@@ -174,7 +174,9 @@ int registrar(mensaje mensajeGeneral) {
   for (int i = 0; i < cant_talkers; i++) {
     if(strcmp(mensajeGeneral.idEnvia, listaUsuarios[i].id) == 0) {
       if(strcmp(listaUsuarios[i].estado, "0") == 0) {
-        listaUsuarios[cant_talkers].pid = atoi(mensajeGeneral.texto);
+        listaUsuarios[i].pid = atoi(mensajeGeneral.texto);
+        strcpy(listaUsuarios[i].estado, "1");
+        respuesta = 2;
       }
       else {
         printf("usuario ya existe compañero\n");
@@ -295,42 +297,86 @@ void responderTalker(mensaje mensajeGeneral) {
 //Funcion Group (crea un grupo con los usuarios que se pasen por parametro) (falta hacerlo)
 void crearGrupo(mensaje mensajeGeneral) { //Falta validar que no se puede crear el grupo con un usuario inexistente
   int count = 0;
+  int existe = 0;
   char *token = strtok(mensajeGeneral.texto, ", ");
 
   while (token != NULL && count < MAX_N) {
-    listaGrupos[cant_grupos].idUsuarios[count] = atoi(token);
-    count++;
-    token = strtok(NULL, ", ");
-    listaGrupos[cant_grupos].numeroUsuarios++;
+    if (strcmp(mensajeGeneral.idEnvia, token) != 0) {
+      existe = 0;
+      for (int i = 0; i < cant_talkers; i++) {
+        if (strcmp(listaUsuarios[i].id, token) == 0) {
+          existe = 1;
+        }
+      }
+      if(existe) {
+        listaGrupos[cant_grupos].idUsuarios[count] = atoi(token);
+        count++;
+        token = strtok(NULL, ", ");
+        listaGrupos[cant_grupos].numeroUsuarios++;
+      }
+      else {
+        strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
+        strcpy(mensajeGeneral.idEnvia, "0");
+        strcpy(mensajeGeneral.texto, "No puede crear un grupo con usuarios que no existan");
+        responderTalker(mensajeGeneral);
+        return;
+      }
+    }
+    else {
+      strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
+        strcpy(mensajeGeneral.idEnvia, "0");
+        strcpy(mensajeGeneral.texto, "No agregue su id para la creacion de grupos,\nusted ya esta incluido al momento de crear grupos");
+        responderTalker(mensajeGeneral);
+        return;
+    }
+  }
+  if (count == 0) {
+    strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
+    strcpy(mensajeGeneral.idEnvia, "0");
+    strcpy(mensajeGeneral.texto, "Agregue usuarios para crear un grupo");
+    responderTalker(mensajeGeneral);
+    return;
   }
 
   listaGrupos[cant_grupos].idUsuarios[count] = atoi(mensajeGeneral.idEnvia);
   listaGrupos[cant_grupos].numeroUsuarios++;
 
-  printf("Grupo %d, creado. Los usuarios de este son:\n", cant_grupos+1);
+  strcpy(mensajeGeneral.texto, "Grupo ");
+  sprintf(mensajeGeneral.texto + strlen(mensajeGeneral.texto), "%d", cant_grupos+1);
+  strcat(mensajeGeneral.texto, " creado. Los usuarios de este son:");
+  
   for (int i = 0; i < listaGrupos[cant_grupos].numeroUsuarios; i++) {
-    printf("%d,", listaGrupos[cant_grupos].idUsuarios[i]);
+    strcat(mensajeGeneral.texto, "\n");
+    strcat(mensajeGeneral.texto, "Usuario ");
+    sprintf(mensajeGeneral.texto + strlen(mensajeGeneral.texto), "%d", listaGrupos[cant_grupos].idUsuarios[i]);
   }
-  printf("\n");
   cant_grupos++;
+
+  responderTalker(mensajeGeneral); 
 }
 
 //Funcion list GID (Listar integrantes de un grupo dado el id del grupo) (falta hacerlo)
 void listarGrupo(mensaje mensajeGeneral) {
-  int grupoSolicitado;
+  int grupoSolicitado = atoi(mensajeGeneral.texto);
 
-  printf("Los usuarios en el grupo %s son: \n", mensajeGeneral.idRecibe);
+  strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
 
-  grupoSolicitado = atoi(&mensajeGeneral.idRecibe[1]);
-  
-  printf("El grupo solicitado es: %d\n", grupoSolicitado);
+  if(grupoSolicitado < cant_grupos +1 && grupoSolicitado > 0 ) {
 
-  /*
-  for(int i=0; i<listaGrupos[grupoSolicitado-1].numeroUsuarios; i++){
-    printf(&listaGrupos[grupoSolicitado].idUsuarios[i]);
+    strcpy(mensajeGeneral.texto, "El grupo ");
+    sprintf(mensajeGeneral.texto + strlen(mensajeGeneral.texto), "%d", grupoSolicitado);
+    strcat(mensajeGeneral.texto, " tiene los siguientes usuarios:");
+    
+    for(int e = 0; e <listaGrupos[grupoSolicitado-1].numeroUsuarios; e++) {
+      strcat(mensajeGeneral.texto, "\n");
+      strcat(mensajeGeneral.texto, "Usuario ");
+      sprintf(mensajeGeneral.texto + strlen(mensajeGeneral.texto), "%d", listaGrupos[grupoSolicitado-1].idUsuarios[e]); 
+    }
   }
-  */
-  
+  else {
+    strcpy(mensajeGeneral.texto, "El grupo no existe");
+  }
+  responderTalker(mensajeGeneral);
 }
 
 //Funcion list (Listar usuarios conectados) (falta hacerlo)
@@ -354,10 +400,70 @@ void listarUsuarios(mensaje mensajeGeneral) {
   responderTalker(mensajeGeneral);
 }
 
+void killAll(mensaje mensajeGeneral) {
+  strcpy(mensajeGeneral.opcion, "kill");
+  strcpy(mensajeGeneral.texto, "Se ha cerrado los servicios del manager");
+
+  for (int i = 0; i < cant_talkers; i++) {
+    if (strcmp(listaUsuarios[i].estado, "1") == 0) {
+      strcpy(mensajeGeneral.idRecibe, listaUsuarios[i].id);
+      responderTalker(mensajeGeneral);
+    } 
+  }
+
+  // Eliminar (unlink) el pipe
+  if (unlink(pipeGeneral) == -1) {
+    perror("Error al eliminar el pipe");
+    exit(EXIT_FAILURE);
+  }
+}
+
+int obtener_longitud(const char *arreglo) {
+    int longitud = 0;
+    while (arreglo[longitud] != '\0') {
+        longitud++;
+    }
+    return longitud;
+}
+
+  //sent msg Idi (Enviar mensaje al talker con id N) (falta hacerlo)
+void MsgUsuario(mensaje mensajeGeneral) {
+  for (int i = 0; i < cant_talkers; i++) {
+    if(strcmp(mensajeGeneral.idRecibe, listaUsuarios[i].id) == 0) {
+      if(strcmp(listaUsuarios[i].estado, "1") == 0) {
+        responderTalker(mensajeGeneral);
+        return;
+      }
+      else {
+        strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
+        strcpy(mensajeGeneral.idEnvia, "0");
+        strcpy(mensajeGeneral.texto, "El usuario no esta conectado");
+        responderTalker(mensajeGeneral);
+        return;
+      }
+    }
+  }
+  strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
+  strcpy(mensajeGeneral.idEnvia, "0");
+  strcpy(mensajeGeneral.texto, "El usuario no existe");
+  responderTalker(mensajeGeneral);
+  return;
+}
+
+int esNumerico(const char *cadena) {
+    int i = 0;
+    while (cadena[i] != '\0') {
+        if (!isdigit(cadena[i])) {
+            return 0;  // No es un dígito
+        }
+        i++;
+    }
+    return 1;
+}
+
 int main(int argc, char *argv[])
 { 
   int fd;
-  int vida = 1;
   char opcion[100];
   mensaje mensajeGeneral;
   
@@ -373,14 +479,13 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
-  while(vida){
+  while(1){
     fd=open(pipeGeneral, O_RDONLY);
     if(fd==-1){
       perror("Error al abrir el pipe)");
     }
     read(fd,&mensajeGeneral,sizeof(mensaje));
     close(fd);
-
 
     printf("\n---------------------------------------------------\n");
     printf("---------Mensaje recibido------\n");
@@ -394,20 +499,35 @@ int main(int argc, char *argv[])
     }
     else if (strcmp(mensajeGeneral.opcion, "List") == 0) {
       printf("Opcion List\n");
-      //listarGrupo(mensajeGeneral);
-      listarUsuarios(mensajeGeneral);
+      if (obtener_longitud(mensajeGeneral.texto) == 0) {
+        listarUsuarios(mensajeGeneral);
+      }
+      else {
+        listarGrupo(mensajeGeneral);
+      }
     }
-    else if (strcmp(mensajeGeneral.opcion, "kill") == 0) {
-      vida = 0;
+    else if (strcmp(mensajeGeneral.opcion, "/kill") == 0) {
+      killAll(mensajeGeneral);
+      exit(0);
     }
     else if (strcmp(mensajeGeneral.opcion, "Sent") == 0) {
+      if (esNumerico(mensajeGeneral.idRecibe)) {
+        MsgUsuario(mensajeGeneral);
+      }
+      else {
+        MsgGrupo(mensajeGeneral);
+      }
       responderTalker(mensajeGeneral);
     }
     else if(strcmp(mensajeGeneral.opcion, "Group") == 0){
       if(strcmp(mensajeGeneral.texto," ")){
         printf("Opcion Listar Grupo\n");
       }
+      strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
       crearGrupo(mensajeGeneral);
+    }
+    else if (strcmp(mensajeGeneral.opcion, "Salir") == 0) {
+      salir(mensajeGeneral);
     }
     else {
       strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
@@ -417,12 +537,5 @@ int main(int argc, char *argv[])
 
     printf(" ");
   };
-
-  // Eliminar (unlink) el pipe
-    if (unlink(pipeGeneral) == -1) {
-        perror("Error al eliminar el pipe");
-        exit(EXIT_FAILURE);
-    }
-    
   return 0;
 }

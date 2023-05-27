@@ -249,6 +249,10 @@ void data_available_handler(int signum) {
   printf("\n%s\n", miMensaje.texto);
   printf("\n-------------------------\n");
 
+  if (strcmp(miMensaje.opcion, "kill") == 0) {
+    exit(0);
+  }
+
   //Si esta esperando un input, vuelve a imprimir menu
   //Una vez se salga del handler, reanudara el fget del main
   if (esperaInput) {
@@ -263,6 +267,7 @@ void data_available_handler(int signum) {
 //*********************************************************************************************************
 
 int main(int argc, char *argv[]) {
+  int continuar = 1;
   pid_t pid = getpid();
   char input[100];
   mensaje mensajeGeneral;
@@ -274,14 +279,14 @@ int main(int argc, char *argv[]) {
 
   signal(SIG_DATA_AVAILABLE, data_available_handler);
   
-  while(1){
+  while(continuar){
     menu();
     printf("Elige una opcion: ");
 
     esperaInput = 1;
     fgets(input, sizeof(input), stdin);
     esperaInput = 0;
-    
+
     memset(mensajeGeneral.opcion, 0, sizeof(mensajeGeneral.opcion));
     memset(mensajeGeneral.texto, 0, sizeof(mensajeGeneral.texto));
     memset(mensajeGeneral.idRecibe, 0, sizeof(mensajeGeneral.idRecibe));
@@ -290,7 +295,7 @@ int main(int argc, char *argv[]) {
     //printf("Opcion ingresada: %s\n", mensajeGeneral.opcion);
 
     if(strcmp(mensajeGeneral.opcion, "List") == 0){
-      sscanf(input, "%*s %19s", mensajeGeneral.idRecibe);
+      sscanf(input, "%*s %19s", mensajeGeneral.texto);
     }
     else if(strcmp(mensajeGeneral.opcion, "Group") == 0){
       sscanf(input, "%*s %19s", mensajeGeneral.texto);
@@ -310,6 +315,9 @@ int main(int argc, char *argv[]) {
       }
       ir[indice] = '\0';
       strcpy(mensajeGeneral.idRecibe,ir);
+    }
+    else if(strcmp(mensajeGeneral.opcion, "Salir") == 0){
+      continuar = 0;
     }
     else{
       printf("Dentro del if Salir\n");
