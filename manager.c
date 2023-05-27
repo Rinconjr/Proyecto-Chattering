@@ -31,6 +31,7 @@
 int fd;
 int cant_talkers = 0;
 int talker_num = 0;
+int cant_grupos = 0;
 char *pipeGeneral;
 int permisosPipe = 0666;
 
@@ -41,8 +42,9 @@ typedef struct usuario {
 }usuario;
 
 typedef struct grupo {
-  char igGrupo[20];
-  usuario usuarios[MAX_N];
+  char idGrupo[20];
+  int numeroUsuarios;
+  char idUsuarios[20];
 }grupo;
 
 typedef struct mensaje {
@@ -68,11 +70,6 @@ const char *fifo = "validar";
 
 //Funcion list GID (Listar integrantes de un grupo dado el id del grupo) (falta hacerlo)
 void listarGrupo(char* pipe) {
-  
-}
-
-//Funcion Group (crea un grupo con los usuarios que se pasen por parametro) (falta hacerlo)
-void crearGrupo(char* pipe) {
   
 }
 
@@ -313,6 +310,29 @@ void popOpcion(char *opt, char *opcion) {
   memmove(opt, opt + strlen(opcion) + 1, strlen(opt) - strlen(opcion));
 }
 
+//Funcion Group (crea un grupo con los usuarios que se pasen por parametro) (falta hacerlo)
+void crearGrupo(mensaje mensajeGeneral) {
+  int count = 0;
+  char *token = strtok(mensajeGeneral.texto, ", ");
+
+  while (token != NULL && count < MAX_N) {
+    listaGrupos[cant_grupos].idUsuarios[count] = atoi(token);
+    count++;
+    token = strtok(NULL, ", ");
+    listaGrupos[cant_grupos].numeroUsuarios++;
+  }
+
+  listaGrupos[cant_grupos].idUsuarios[count] = atoi(mensajeGeneral.idEnvia);
+  listaGrupos[cant_grupos].numeroUsuarios++;
+
+  printf("Grupo %d, creado. Los usuarios de este son:\n", cant_grupos+1);
+  for (int i = 0; i < listaGrupos[cant_grupos].numeroUsuarios; i++) {
+    printf("%d,", listaGrupos[cant_grupos].idUsuarios[i]);
+  }
+  printf("\n");
+  cant_grupos++;
+}
+
 //Funcion list (Listar usuarios conectados) (falta hacerlo)
 void listarUsuarios(mensaje mensajeGeneral) {
   char numeroComoCadena[20];
@@ -383,6 +403,10 @@ int main(int argc, char *argv[])
     }
     else if (strcmp(mensajeGeneral.opcion, "Sent") == 0) {
       responderTalker(mensajeGeneral);
+    }
+    else if(strcmp(mensajeGeneral.opcion, "Group") == 0){
+      printf("Opcion Crear Grupo\n");
+      crearGrupo(mensajeGeneral);
     }
     else {
       strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
