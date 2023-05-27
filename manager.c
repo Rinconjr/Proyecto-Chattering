@@ -20,18 +20,28 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <signal.h>
 
 //*****************************************************************
 // DEFINICION DE VARIABLES GLOBALES
 //*****************************************************************
 #define MAX_N 100
 int fd;
-int lista_usuarios[MAX_N] = {};
 int cant_talkers = 0;
 int talker_num = 0;
 char *pipeGeneral;
 int permisosPipe = 0666;
 
+typedef struct usuario {
+  char id[20];
+  char estado[10];
+  pid_t pid;
+}usuario;
+
+typedef struct grupo {
+  char igGrupo[20];
+  usuario usuarios[MAX_N];
+}grupo;
 
 typedef struct mensaje {
   char idEnvia[20];
@@ -40,9 +50,8 @@ typedef struct mensaje {
   char texto[100];
 } mensaje;
 
-//*****************************************************************
-// DECLARACIÓN DE FUNCIONES
-//*****************************************************************
+struct usuario listaUsuarios[MAX_N];
+struct grupo listaGrupos[MAX_N];
 
 
 //*****************************************************************
@@ -76,8 +85,12 @@ void enviarMsgGrupo(char* pipe) {
 }
 
 //Salir (Sale y le informa al manager que salio) (falta hacerlo)
-void salir(char* pipe) {
-  
+void salir(mensaje mensajeGeneral) {
+  for (int i = 0; i < cant_talkers; i++) {
+    if (strcmp(listaUsuarios[i].id, mensajeGeneral.idEnvia) == 0) {
+      strcpy(listaUsuarios[i].estado, "0");
+    }
+  }
 }
 
 //Valida los argumentos al ejecutar el master
@@ -165,21 +178,30 @@ int registrar(mensaje mensajeGeneral) {
 
   //COMPROBAR SI EL USUARIO EXITE, NO EXISTE O NO HAY ESPACIO
   for (int i = 0; i < cant_talkers; i++) {
-    if(lista_usuarios[i] == atoi(mensajeGeneral.idEnvia)) {
-      printf("usuario ya existe compañero\n");
-      respuesta = 1;
+    if(strcmp(mensajeGeneral.idEnvia, listaUsuarios[i].id) == 0) {
+      if(strcmp(listaUsuarios[i].estado, "0") == 0) {
+        listaUsuarios[cant_talkers].pid = atoi(mensajeGeneral.texto);
+      }
+      else {
+        printf("usuario ya existe compañero\n");
+        respuesta = 1;
+      }
     }
   }
   if(respuesta == 0 && cant_talkers != talker_num) {
     printf("anadiendo usuario %s... \n", mensajeGeneral.idEnvia);
-    lista_usuarios[cant_talkers] = atoi(mensajeGeneral.idEnvia);
+    
+    strcpy(listaUsuarios[cant_talkers].id, mensajeGeneral.idEnvia);
+    strcpy(listaUsuarios[cant_talkers].estado, "1");
+    listaUsuarios[cant_talkers].pid = atoi(mensajeGeneral.texto);
+    printf("test\n");
     cant_talkers++;
     respuesta = 2;
   }
   //COMPROBAR SI EL USUARIO EXITE, NO EXISTE O NO HAY ESPACIO
 
   //LLENAR MENSAJE DE ENVIO
-  sprintf(mensajeGeneral.idRecibe, "%d", mensajeGeneral.idEnvia);
+  sprintf(mensajeGeneral.idRecibe, "%s", mensajeGeneral.idEnvia);
   sprintf(mensajeGeneral.idEnvia, "%d", 0);
   sprintf(mensajeGeneral.opcion, "%d", respuesta);
   //LLENAR MENSAJE DE ENVIO
@@ -215,19 +237,26 @@ int registrar(mensaje mensajeGeneral) {
 
 
 void responderTalker(mensaje mensajeGeneral) {
+  pid_t tmp_pid = 0;
   int pipe_fd;
   char pipeRegreso[100];
 
   sprintf(pipeRegreso, "%s%s", pipeGeneral, mensajeGeneral.idRecibe);
 
-  //INFORMACION DEL MENSAJE
-  //printf("Nombre pipe %s\n", pipeRegreso);
-  //printf("Nombre quien envia %s\n", mensajeGeneral.idEnvia);
-  //printf("Nombre quien recibe %s\n", mensajeGeneral.idRecibe);
-  //printf("opcion %s\n", mensajeGeneral.opcion);
-  //printf("texto %s\n", mensajeGeneral.texto);
-  //INFORMACION DEL MENSAJE
 
+  //COMPROBAR SI EL USUARIO ESTA CONECTADO, SI NO LO ESTA NO ENVIA NADA
+  for (int i = 0; i < cant_talkers; i++) {
+    if(strcmp(mensajeGeneral.idRecibe, listaUsuarios[i].id) == 0) {
+      if(strcmp(listaUsuarios[i].estado, "1") == 0) {
+          tmp_pid = listaUsuarios[i].pid;
+      }
+    }
+  }
+  kill(tmp_pid,SIGUSR1);
+  if(tmp_pid == 0) {
+    return;
+  }
+  
   //PIPE CON EL TALKER
     // Crear el pipe no nominal
     if (mkfifo(pipeRegreso, 0666) == -1) {
@@ -245,10 +274,12 @@ void responderTalker(mensaje mensajeGeneral) {
     // Enviar el mensaje a través del pipe
     write(pipe_fd, &mensajeGeneral, sizeof(mensajeGeneral));
     
+    
     // Cerrar el pipe
     close(pipe_fd);
     
     // Eliminar (unlink) el pipe
+  
     if (unlink(pipeRegreso) == -1) {
         perror("Error al eliminar el pipe");
         exit(EXIT_FAILURE);
@@ -278,13 +309,13 @@ void listarUsuarios(mensaje mensajeGeneral) {
   
   
   for (int i = 0; i < cant_talkers; i++) {
-    sprintf(numeroComoCadena, "%d", lista_usuarios[i]);
-    strcat(mensajeGeneral.texto, numeroComoCadena);
-
-    if(i == cant_talkers-1) {
+    if (strcmp(listaUsuarios[i].estado, "1") == 0) {
+      strcat(mensajeGeneral.texto, listaUsuarios[i].id);
+      if(i == cant_talkers-1) {
       break;
     }
     strcat(mensajeGeneral.texto, ",");
+    }
   }
 
   strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
@@ -297,6 +328,7 @@ int main(int argc, char *argv[])
   int vida = 1;
   char opcion[100];
   mensaje mensajeGeneral;
+  
   //Se validan los argumentos
   if(!validar_args(argc, argv)) {
     return 0;
@@ -323,10 +355,6 @@ int main(int argc, char *argv[])
     else if (strcmp(mensajeGeneral.opcion, "List") == 0) {
       printf("Opcion List\n");
       listarUsuarios(mensajeGeneral);
-      //Esto es para mandar el mensaje de regreso
-      //strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
-      //strcpy(mensajeGeneral.opcion, "llega");
-      //responderTalker(mensajeGeneral);
     }
     else if (strcmp(mensajeGeneral.opcion, "Group") == 0) {
       printf("Opcion Group\n");
@@ -341,6 +369,7 @@ int main(int argc, char *argv[])
     }
     else if (strcmp(mensajeGeneral.opcion, "Salir") == 0) {
       printf("Opcion Salir\n");
+      salir(mensajeGeneral);
     }
     else if (strcmp(mensajeGeneral.opcion, "kill") == 0) { //Listo para hacer
       //code

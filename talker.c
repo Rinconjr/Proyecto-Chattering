@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <string.h>
+#include <signal.h>
 
 //*****************************************************************
 // DEFINICION DE VARIABLES GLOBALES
@@ -49,6 +50,7 @@ typedef struct mensaje {
   char idRecibe[20];
   char opcion[200];
   char texto[100];
+  
 } mensaje;
 
 //************************************************************************
@@ -146,7 +148,7 @@ int validar_args(int argc, char *argv[]) {
 
 // Valida el id del talker
 bool registrar(mensaje mensajeGeneral, pid_t pid) {
-  //Para preguntarle al manager si puede ingresar///////////////////////////
+  //Para preguntarle al manager si puede ingresar/
   fd = open(pipeGeneral, O_WRONLY);
   if(fd==-1){
     perror("Error al abrir el pipe");
@@ -160,7 +162,7 @@ bool registrar(mensaje mensajeGeneral, pid_t pid) {
   
   write(fd, &mensajeGeneral, sizeof(mensajeGeneral));
   close(fd);
-  //Para preguntarle al manager si puede ingresar//////////////////////////
+  //Para preguntarle al manager si puede ingresar/
 
   //RECIBIR RESPUESTA DEL MANAGER
   int fd1;
@@ -223,7 +225,6 @@ void recibirRespuesta(mensaje* mensajeGeneral) {
   }
 }
 
-
 int obtener_longitud(const char *arreglo) {
     int longitud = 0;
     while (arreglo[longitud] != '\0') {
@@ -235,6 +236,15 @@ int obtener_longitud(const char *arreglo) {
 void popOpcion(char *opt, char *opcion) {
   sscanf(opt, "%s", opcion);
   memmove(opt, opt + strlen(opcion) + 1, strlen(opt) - strlen(opcion));
+}
+
+typedef void (*sighandler_t)(int);
+sighandler_t signalHandler (void)
+{
+  //RECIBIR RESPUESTA
+  mensaje miMensaje;
+  recibirRespuesta(&miMensaje);
+  printf("%s\n", miMensaje.texto);
 }
 
 
@@ -254,6 +264,8 @@ int main(int argc, char *argv[]) {
   }
   
   registrar(mensajeGeneral, pid);
+
+  signal(SIGUSR1, signalHandler);
   
   while(1){
     fd = open(pipeGeneral, O_WRONLY);
@@ -265,13 +277,14 @@ int main(int argc, char *argv[]) {
     memset(mensajeGeneral.opcion, 0, sizeof(mensajeGeneral.opcion));
     memset(mensajeGeneral.texto, 0, sizeof(mensajeGeneral.texto));
     memset(mensajeGeneral.idRecibe, 0, sizeof(mensajeGeneral.idRecibe));
-    
+
     menu();
     printf("Elige una opcion: ");
+    
 
     fgets(input, sizeof(input), stdin);
     sscanf(input, "%s", mensajeGeneral.opcion);
-    printf("Opcion ingresada: %s\n", mensajeGeneral.opcion);
+    //printf("Opcion ingresada: %s\n", mensajeGeneral.opcion);
 
     if(strcmp(mensajeGeneral.opcion, "List") == 0){
       sscanf(input, "%*s %19s", mensajeGeneral.idRecibe);
@@ -289,16 +302,13 @@ int main(int argc, char *argv[]) {
 
     sprintf(mensajeGeneral.idEnvia, "%d", id_talker);
     
-    printf("Texto ingresado: %s\n", mensajeGeneral.texto);
-    printf("Id para enviar ingresado: %s\n", mensajeGeneral.idRecibe);
+    //printf("Texto ingresado: %s\n", mensajeGeneral.texto);
+    //printf("Id para enviar ingresado: %s\n", mensajeGeneral.idRecibe);
     
     write(fd, &mensajeGeneral, sizeof(mensajeGeneral));
     close(fd);
 
-    //RECIBIR RESPUESTA
-    mensaje miMensaje;
-    recibirRespuesta(&miMensaje);
-    printf("%s\n", miMensaje.texto);
+    pause();
     
   }
   return 0;
