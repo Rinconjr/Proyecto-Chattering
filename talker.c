@@ -28,12 +28,16 @@
 //*****************************************************************
 // DEFINICION DE VARIABLES GLOBALES
 //*****************************************************************
+#define SIG_DATA_AVAILABLE SIGUSR1
+
 #define MAX_i 100
 
 int id_talker = 0;
 int fd;
 char *nombre_pipe;
 char *pipe_talker;
+
+int esperaInput = 0;
 
 //*****************************************************************
 // DECLARACIÓN DE VARIABLES
@@ -156,7 +160,7 @@ bool registrar(mensaje mensajeGeneral, pid_t pid) {
   }
   
   sprintf(mensajeGeneral.idEnvia, "%d", id_talker);
-  strcat(mensajeGeneral.idRecibe, "0");
+  strcpy(mensajeGeneral.idRecibe, "0");
   strcpy(mensajeGeneral.opcion, "registrar");
   sprintf(mensajeGeneral.texto, "%d", pid); //guarda el pid del proceso 
   
@@ -238,16 +242,20 @@ void popOpcion(char *opt, char *opcion) {
   memmove(opt, opt + strlen(opcion) + 1, strlen(opt) - strlen(opcion));
 }
 
-typedef void (*sighandler_t)(int);
-sighandler_t signalHandler (void)
-{
-  //RECIBIR RESPUESTA
+void data_available_handler(int signum) {
+  printf("\n------mensaje nuevo------\n");
   mensaje miMensaje;
   recibirRespuesta(&miMensaje);
-  printf("%s\n", miMensaje.texto);
+  printf("\n%s\n", miMensaje.texto);
+  printf("\n-------------------------\n");
+
+  //Si esta esperando un input, vuelve a imprimir menu
+  //Una vez se salga del handler, reanudara el fget del main
+  if (esperaInput) {
+    menu();
+    printf("Elige una opcion: \n");
+  }
 }
-
-
 //---------------------------------------------------------------------------------------------
 
 //*********************************************************************************************************
@@ -262,27 +270,22 @@ int main(int argc, char *argv[]) {
   if (!validar_args(argc, argv)) {
     return 0;
   }
-  
   registrar(mensajeGeneral, pid);
 
-  signal(SIGUSR1, signalHandler);
+  signal(SIG_DATA_AVAILABLE, data_available_handler);
   
   while(1){
-    fd = open(pipeGeneral, O_WRONLY);
-    if(fd==-1){
-      perror("Error al abrir el pipe");
-      exit(1);
-    }
+    menu();
+    printf("Elige una opcion: ");
+
+    esperaInput = 1;
+    fgets(input, sizeof(input), stdin);
+    esperaInput = 0;
     
     memset(mensajeGeneral.opcion, 0, sizeof(mensajeGeneral.opcion));
     memset(mensajeGeneral.texto, 0, sizeof(mensajeGeneral.texto));
     memset(mensajeGeneral.idRecibe, 0, sizeof(mensajeGeneral.idRecibe));
 
-    menu();
-    printf("Elige una opcion: ");
-    
-
-    fgets(input, sizeof(input), stdin);
     sscanf(input, "%s", mensajeGeneral.opcion);
     //printf("Opcion ingresada: %s\n", mensajeGeneral.opcion);
 
@@ -290,11 +293,23 @@ int main(int argc, char *argv[]) {
       sscanf(input, "%*s %19s", mensajeGeneral.idRecibe);
     }
     else if(strcmp(mensajeGeneral.opcion, "Group") == 0){
-      sscanf(input, "%*s %19s", mensajeGeneral.idRecibe);
+      sscanf(input, "%*s %19s", mensajeGeneral.texto);
     }
     else if(strcmp(mensajeGeneral.opcion, "Sent") == 0){
       sscanf(input, "%*s \"%99[^\"]\"", mensajeGeneral.texto);
-      sscanf(strrchr(input, '\"') + 1, " %19[^\"] ", mensajeGeneral.idRecibe);
+      sscanf(strrchr(input, '\"') + 1, " %19[^\"]%*c", mensajeGeneral.idRecibe);
+
+      //Esto lo agregue porque el regex esta pasando un caracter extraño al final
+      char ir[100];
+      int indice = 0;
+      for (int i = 0; mensajeGeneral.idRecibe[i] != '\0'; i++) {
+        if (isalnum(mensajeGeneral.idRecibe[i])) {
+            ir[indice] = mensajeGeneral.idRecibe[i];
+            indice++;
+        }
+      }
+      ir[indice] = '\0';
+      strcpy(mensajeGeneral.idRecibe,ir);
     }
     else{
       printf("Dentro del if Salir\n");
@@ -304,12 +319,15 @@ int main(int argc, char *argv[]) {
     
     //printf("Texto ingresado: %s\n", mensajeGeneral.texto);
     //printf("Id para enviar ingresado: %s\n", mensajeGeneral.idRecibe);
-    
+    fd = open(pipeGeneral, O_WRONLY);
+    if(fd==-1){
+      perror("Error al abrir el pipe");
+      exit(1);
+    }
     write(fd, &mensajeGeneral, sizeof(mensajeGeneral));
-    close(fd);
+    close(fd); 
 
-    pause();
-    
+    usleep(500000);
   }
   return 0;
 } 

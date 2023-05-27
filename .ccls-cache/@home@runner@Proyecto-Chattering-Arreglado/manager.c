@@ -25,6 +25,8 @@
 //*****************************************************************
 // DEFINICION DE VARIABLES GLOBALES
 //*****************************************************************
+#define SIG_DATA_AVAILABLE SIGUSR1
+
 #define MAX_N 100
 int fd;
 int cant_talkers = 0;
@@ -194,7 +196,6 @@ int registrar(mensaje mensajeGeneral) {
     strcpy(listaUsuarios[cant_talkers].id, mensajeGeneral.idEnvia);
     strcpy(listaUsuarios[cant_talkers].estado, "1");
     listaUsuarios[cant_talkers].pid = atoi(mensajeGeneral.texto);
-    printf("test\n");
     cant_talkers++;
     respuesta = 2;
   }
@@ -232,6 +233,14 @@ int registrar(mensaje mensajeGeneral) {
         exit(EXIT_FAILURE);
     }
   //PIPE CON EL TALKER
+  printf("---------Mensaje enviado------\n");
+  printf("IdEnvia: %s\n", mensajeGeneral.idEnvia);
+  printf("IdRecibe: %s\n", mensajeGeneral.idRecibe);
+  printf("Opcion: %s\n", mensajeGeneral.opcion);
+  printf("Texto: %s\n", mensajeGeneral.texto);
+  printf("---------------------------------------------------\n");
+
+  
     return 0;
 }
 
@@ -243,19 +252,20 @@ void responderTalker(mensaje mensajeGeneral) {
 
   sprintf(pipeRegreso, "%s%s", pipeGeneral, mensajeGeneral.idRecibe);
 
-
   //COMPROBAR SI EL USUARIO ESTA CONECTADO, SI NO LO ESTA NO ENVIA NADA
   for (int i = 0; i < cant_talkers; i++) {
     if(strcmp(mensajeGeneral.idRecibe, listaUsuarios[i].id) == 0) {
       if(strcmp(listaUsuarios[i].estado, "1") == 0) {
           tmp_pid = listaUsuarios[i].pid;
+          printf("EL PID AL QUE SE LE ENVIA: %d\n", tmp_pid);
       }
     }
   }
-  kill(tmp_pid,SIGUSR1);
   if(tmp_pid == 0) {
     return;
   }
+  pid_t receptor_pid = tmp_pid;
+  kill(receptor_pid, SIG_DATA_AVAILABLE);
   
   //PIPE CON EL TALKER
     // Crear el pipe no nominal
@@ -264,28 +274,30 @@ void responderTalker(mensaje mensajeGeneral) {
         exit(EXIT_FAILURE);
     }
     
-    // Abrir el pipe para escribir
+    // Abrir el pipe para escribir y enviar
     pipe_fd = open(pipeRegreso, O_WRONLY);
     if (pipe_fd == -1) {
-        perror("Error al abrir el pipe para escribir");
-        exit(EXIT_FAILURE);
+      perror("Error al abrir el pipe para escribir");
+      exit(EXIT_FAILURE);
     }
-    
-    // Enviar el mensaje a través del pipe
     write(pipe_fd, &mensajeGeneral, sizeof(mensajeGeneral));
-    
-    
-    // Cerrar el pipe
     close(pipe_fd);
     
     // Eliminar (unlink) el pipe
-  
     if (unlink(pipeRegreso) == -1) {
         perror("Error al eliminar el pipe");
         exit(EXIT_FAILURE);
     }
   //PIPE CON EL TALKER
   
+
+
+  printf("---------Mensaje enviado------\n");
+  printf("IdEnvia: %s\n", mensajeGeneral.idEnvia);
+  printf("IdRecibe: %s\n", mensajeGeneral.idRecibe);
+  printf("Opcion: %s\n", mensajeGeneral.opcion);
+  printf("Texto: %s\n", mensajeGeneral.texto);
+  printf("---------------------------------------------------\n");
 }
 
 int obtener_longitud(const char *arreglo) {
@@ -349,6 +361,16 @@ int main(int argc, char *argv[])
     read(fd,&mensajeGeneral,sizeof(mensaje));
     close(fd);
 
+
+    printf("---------------------------------------------------\n");
+    printf("---------Mensaje recibido------\n");
+    printf("IdEnvia: %s\n", mensajeGeneral.idEnvia);
+    printf("IdRecibe: %s\n", mensajeGeneral.idRecibe);
+    printf("Opcion: %s\n", mensajeGeneral.opcion);
+    printf("Texto: %s\n\n", mensajeGeneral.texto);
+
+    
+
     if (strcmp(mensajeGeneral.opcion, "registrar") == 0) {
       registrar(mensajeGeneral);
     }
@@ -356,27 +378,16 @@ int main(int argc, char *argv[])
       printf("Opcion List\n");
       listarUsuarios(mensajeGeneral);
     }
-    else if (strcmp(mensajeGeneral.opcion, "Group") == 0) {
-      printf("Opcion Group\n");
-    }
-    else if (strcmp(mensajeGeneral.opcion, "Sent") == 0) {
-      printf("Opcion Sent\n");
-
-      //ESto es de prueba
-      strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
-      strcpy(mensajeGeneral.opcion, "llega");
-      responderTalker(mensajeGeneral);
-    }
-    else if (strcmp(mensajeGeneral.opcion, "Salir") == 0) {
-      printf("Opcion Salir\n");
-      salir(mensajeGeneral);
-    }
-    else if (strcmp(mensajeGeneral.opcion, "kill") == 0) { //Listo para hacer
-      //code
+    else if (strcmp(mensajeGeneral.opcion, "kill") == 0) {
       vida = 0;
     }
+    else if (strcmp(mensajeGeneral.opcion, "Sent") == 0) {
+      responderTalker(mensajeGeneral);
+    }
     else {
-      printf("Opcion de talker %s: %s\n",mensajeGeneral.idEnvia, mensajeGeneral.opcion);
+      strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
+      strcpy(mensajeGeneral.texto, "Opcion invalida");
+      responderTalker(mensajeGeneral);
     }
 
     printf(" ");
