@@ -68,13 +68,6 @@ const char *fifo = "validar";
 // FUNCIONES
 //************************************************************************
 
-
-
-//sent msg GroupIdi (Enviar mensaje al grupo de id n) (falta hacerlo)
-void MsgGrupo(mensaje mensajeGeneral) {
-  
-}
-
 //Salir (Sale y le informa al manager que salio) (falta hacerlo)
 void salir(mensaje mensajeGeneral) {
   for (int i = 0; i < cant_talkers; i++) {
@@ -428,9 +421,15 @@ int obtener_longitud(const char *arreglo) {
 
   //sent msg Idi (Enviar mensaje al talker con id N) (falta hacerlo)
 void MsgUsuario(mensaje mensajeGeneral) {
+  char tmpText[100] = "Mensaje directo de usuario ";
+  strcat(tmpText, mensajeGeneral.idEnvia);
+  strcat(tmpText, ": ");
+  
   for (int i = 0; i < cant_talkers; i++) {
     if(strcmp(mensajeGeneral.idRecibe, listaUsuarios[i].id) == 0) {
       if(strcmp(listaUsuarios[i].estado, "1") == 0) {
+        strcat(tmpText, mensajeGeneral.texto);
+        strcpy(mensajeGeneral.texto, tmpText);
         responderTalker(mensajeGeneral);
         return;
       }
@@ -459,6 +458,44 @@ int esNumerico(const char *cadena) {
         i++;
     }
     return 1;
+}
+
+//sent msg GroupIdi (Enviar mensaje al grupo de id n) (falta hacerlo)
+void MsgGrupo(mensaje mensajeGeneral) {
+  int buscarGrupo;
+  //Validar que la primera letra es una G y el resto numeros
+  if (mensajeGeneral.idRecibe[0] == 'G') {
+    for (int i = 1; mensajeGeneral.idRecibe[i] != '\0'; i++) {
+        if (!isdigit(mensajeGeneral.idRecibe[i])) {
+          strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
+          strcpy(mensajeGeneral.texto, "No se puede enviar el mensaje. Revise el destinatario");
+          //responderTalker(mensajeGeneral);
+          return;
+        }
+    }
+  }
+  else {
+    strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
+    strcpy(mensajeGeneral.texto, "No se puede enviar el mensaje.\n");
+    strcat(mensajeGeneral.texto, "Para enviar mensaje a un grupo, escriba G seguido del numero del grupo.");
+    //responderTalker(mensajeGeneral);
+    return;
+  }
+
+  //Encontrar grupo, ignora la G inicial
+  buscarGrupo = atoi(mensajeGeneral.idRecibe + 1);
+
+  //Buscar grupo
+  if( buscarGrupo > cant_grupos || buscarGrupo < 0) {
+    strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
+    strcpy(mensajeGeneral.texto, "No se puede enviar el mensaje. Revise el destinatario");
+    //responderTalker(mensajeGeneral);
+    return;
+  }
+  else {
+    printf("El grupo tiene los siguientes usuarios: \n");
+
+  }
 }
 
 int main(int argc, char *argv[])
@@ -517,7 +554,6 @@ int main(int argc, char *argv[])
       else {
         MsgGrupo(mensajeGeneral);
       }
-      responderTalker(mensajeGeneral);
     }
     else if(strcmp(mensajeGeneral.opcion, "Group") == 0){
       if(strcmp(mensajeGeneral.texto," ")){
