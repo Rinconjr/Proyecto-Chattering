@@ -42,7 +42,6 @@ typedef struct usuario {
 }usuario;
 
 typedef struct grupo {
-  //char idGrupo[20];
   int numeroUsuarios;
   char idUsuarios[20];
 }grupo;
@@ -231,7 +230,6 @@ int registrar(mensaje mensajeGeneral) {
     return 0;
 }
 
-
 void responderTalker(mensaje mensajeGeneral) {
   pid_t tmp_pid = 0;
   int pipe_fd;
@@ -348,26 +346,49 @@ void crearGrupo(mensaje mensajeGeneral) { //Falta validar que no se puede crear 
 
 //Funcion list GID (Listar integrantes de un grupo dado el id del grupo) (falta hacerlo)
 void listarGrupo(mensaje mensajeGeneral) {
-  int grupoSolicitado = atoi(mensajeGeneral.texto);
-
+  int buscarGrupo;
   strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
-
-  if(grupoSolicitado < cant_grupos +1 && grupoSolicitado > 0 ) {
-
-    strcpy(mensajeGeneral.texto, "El grupo ");
-    sprintf(mensajeGeneral.texto + strlen(mensajeGeneral.texto), "%d", grupoSolicitado);
-    strcat(mensajeGeneral.texto, " tiene los siguientes usuarios:");
-    
-    for(int e = 0; e <listaGrupos[grupoSolicitado-1].numeroUsuarios; e++) {
-      strcat(mensajeGeneral.texto, "\n");
-      strcat(mensajeGeneral.texto, "Usuario ");
-      sprintf(mensajeGeneral.texto + strlen(mensajeGeneral.texto), "%d", listaGrupos[grupoSolicitado-1].idUsuarios[e]); 
+  //Validar que la primera letra es una G y el resto numeros
+  if (mensajeGeneral.texto[0] == 'G') {
+    for (int i = 1; mensajeGeneral.texto[i] != '\0'; i++) {
+        if (!isdigit(mensajeGeneral.texto[i])) {
+          strcpy(mensajeGeneral.texto, "No se puede listar. Ingrese el id del grupo");
+          responderTalker(mensajeGeneral);
+          return;
+        }
     }
   }
   else {
-    strcpy(mensajeGeneral.texto, "El grupo no existe");
+    printf("No ingreso G\n");
+    strcpy(mensajeGeneral.texto, "No se puede listar. Si desea listar un grupo ingrese la G primero");
+    responderTalker(mensajeGeneral);
+    return;
   }
-  responderTalker(mensajeGeneral);
+
+  //Encontrar grupo, ignora la G inicial
+  buscarGrupo = atoi(mensajeGeneral.texto + 1);
+
+  //Buscar grupo
+  if( buscarGrupo > cant_grupos || buscarGrupo <= 0) {
+    strcpy(mensajeGeneral.texto, "No se pudo encontrar el grupo.");
+    responderTalker(mensajeGeneral);
+    return;
+  }
+
+ //Responder a talker
+  else {
+    strcpy(mensajeGeneral.texto, "El grupo ");
+    sprintf(mensajeGeneral.texto + strlen(mensajeGeneral.texto), "%d", buscarGrupo);
+    strcat(mensajeGeneral.texto, " tiene los siguientes usuarios:");
+    
+    for(int e = 0; e <listaGrupos[buscarGrupo-1].numeroUsuarios; e++) {
+      strcat(mensajeGeneral.texto, "\n");
+      strcat(mensajeGeneral.texto, "Usuario ");
+      sprintf(mensajeGeneral.texto + strlen(mensajeGeneral.texto), "%d", listaGrupos[buscarGrupo-1].idUsuarios[e]); 
+    }
+    responderTalker(mensajeGeneral);
+    return;
+  }
 }
 
 //Funcion list (Listar usuarios conectados) (falta hacerlo)
@@ -422,6 +443,21 @@ void MsgUsuario(mensaje mensajeGeneral) {
   char tmpText[100] = "Mensaje directo de usuario ";
   strcat(tmpText, mensajeGeneral.idEnvia);
   strcat(tmpText, ": ");
+
+  if (*mensajeGeneral.texto == '\0') {
+    strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
+    strcpy(mensajeGeneral.idEnvia, "0");
+    strcpy(mensajeGeneral.texto, "Para enviar un mensaje ingrese el texto, y el destinatario");
+    responderTalker(mensajeGeneral);
+    return;
+  }
+  else if (*mensajeGeneral.idRecibe == '\0') {
+    strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
+    strcpy(mensajeGeneral.idEnvia, "0");
+    strcpy(mensajeGeneral.texto, "Para enviar un mensaje ingrese el destinatario");
+    responderTalker(mensajeGeneral);
+    return;
+  }
   
   for (int i = 0; i < cant_talkers; i++) {
     if(strcmp(mensajeGeneral.idRecibe, listaUsuarios[i].id) == 0) {
@@ -467,16 +503,16 @@ void MsgGrupo(mensaje mensajeGeneral) {
         if (!isdigit(mensajeGeneral.idRecibe[i])) {
           strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
           strcpy(mensajeGeneral.texto, "No se puede enviar el mensaje. Revise el destinatario");
-          //responderTalker(mensajeGeneral);
+          responderTalker(mensajeGeneral);
           return;
         }
     }
   }
   else {
+    printf("No ingreso G\n");
     strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
-    strcpy(mensajeGeneral.texto, "No se puede enviar el mensaje.\n");
-    strcat(mensajeGeneral.texto, "Para enviar mensaje a un grupo, escriba G seguido del numero del grupo.");
-    //responderTalker(mensajeGeneral);
+    strcpy(mensajeGeneral.texto, "No se puede enviar el mensaje. \nPara mandar mensaje a un grupo debe ingresar la G primero");
+    responderTalker(mensajeGeneral);
     return;
   }
 
@@ -484,15 +520,19 @@ void MsgGrupo(mensaje mensajeGeneral) {
   buscarGrupo = atoi(mensajeGeneral.idRecibe + 1);
 
   //Buscar grupo
-  if( buscarGrupo > cant_grupos || buscarGrupo < 0) {
+  if( buscarGrupo > cant_grupos || buscarGrupo <= 0) {
     strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
     strcpy(mensajeGeneral.texto, "No se pudo encontrar el grupo. Revise el destinatario");
-    //responderTalker(mensajeGeneral);
+    responderTalker(mensajeGeneral);
     return;
   }
-  else {
-    printf("El grupo tiene los siguientes usuarios: \n");
 
+ //Responder a talkers
+  else {
+    for(int e = 0; e <listaGrupos[buscarGrupo-1].numeroUsuarios; e++) {
+      sprintf(mensajeGeneral.idRecibe, "%d", listaGrupos[buscarGrupo-1].idUsuarios[e]);
+      responderTalker(mensajeGeneral);
+    }
   }
 }
 

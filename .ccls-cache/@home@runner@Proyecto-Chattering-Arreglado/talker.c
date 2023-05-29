@@ -301,19 +301,24 @@ int main(int argc, char *argv[]) {
     }
     else if(strcmp(mensajeGeneral.opcion, "Sent") == 0){
       sscanf(input, "%*s \"%99[^\"]\"", mensajeGeneral.texto);
-      sscanf(strrchr(input, '\"') + 1, " %19[^\"]%*c", mensajeGeneral.idRecibe);
+      if (*mensajeGeneral.texto != '\0') {
+        sscanf(strrchr(input, '\"') + 1, " %19[^\"]%*c", mensajeGeneral.idRecibe);
 
-      //Esto lo agregue porque el regex esta pasando un caracter extraño al final
-      char ir[100];
-      int indice = 0;
-      for (int i = 0; mensajeGeneral.idRecibe[i] != '\0'; i++) {
-        if (isalnum(mensajeGeneral.idRecibe[i])) {
+        //Esto lo agregue porque el regex esta pasando un caracter extraño al final
+        char ir[100];
+        int indice = 0;
+        for (int i = 0; mensajeGeneral.idRecibe[i] != '\0'; i++) {
+          if (isalnum(mensajeGeneral.idRecibe[i])) {
             ir[indice] = mensajeGeneral.idRecibe[i];
             indice++;
+          }
         }
+        ir[indice] = '\0';
+        strcpy(mensajeGeneral.idRecibe,ir);
       }
-      ir[indice] = '\0';
-      strcpy(mensajeGeneral.idRecibe,ir);
+      else {
+        strcpy(mensajeGeneral.texto, "");
+      }
     }
     else if(strcmp(mensajeGeneral.opcion, "Salir") == 0){
       continuar = 0;
@@ -322,6 +327,9 @@ int main(int argc, char *argv[]) {
       printf("Dentro del if Salir\n");
     }
 
+
+
+    
     sprintf(mensajeGeneral.idEnvia, "%d", id_talker);
     
     //printf("Texto ingresado: %s\n", mensajeGeneral.texto);
