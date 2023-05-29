@@ -63,15 +63,14 @@ typedef struct mensaje {
 
 // Poner que es la funcion para mostrar el menu
 void menu() {
-  printf("----------------------\n");
-  printf("Menu\n");
+  printf("\n----------Menu----------\n");
   printf("List\n");
   printf("List GID\n");
   printf("Group\n");
   printf("Sent msg id\n");
   printf("Sent msg Gid\n");
   printf("Salir\n");
-  printf("----------------------\n");
+  printf("--------Fin-Menu--------\n");
 }
 
 // Valida los argumentos
@@ -243,7 +242,7 @@ void popOpcion(char *opt, char *opcion) {
 }
 
 void data_available_handler(int signum) {
-  printf("\n------mensaje nuevo------\n");
+  printf("\n------Mensaje-Nuevo------\n");
   mensaje miMensaje;
   recibirRespuesta(&miMensaje);
   printf("\n%s\n", miMensaje.texto);

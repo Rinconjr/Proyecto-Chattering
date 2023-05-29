@@ -220,7 +220,7 @@ int registrar(mensaje mensajeGeneral) {
         exit(EXIT_FAILURE);
     }
   //PIPE CON EL TALKER
-  printf("---------Mensaje enviado------\n");
+  printf("---------Mensaje-Enviado------\n");
   printf("IdEnvia: %s\n", mensajeGeneral.idEnvia);
   printf("IdRecibe: %s\n", mensajeGeneral.idRecibe);
   printf("Opcion: %s\n", mensajeGeneral.opcion);
@@ -276,8 +276,6 @@ void responderTalker(mensaje mensajeGeneral) {
         exit(EXIT_FAILURE);
     }
   //PIPE CON EL TALKER
-  
-
 
   printf("---------Mensaje enviado------\n");
   printf("IdEnvia: %s\n", mensajeGeneral.idEnvia);
@@ -488,7 +486,7 @@ void MsgGrupo(mensaje mensajeGeneral) {
   //Buscar grupo
   if( buscarGrupo > cant_grupos || buscarGrupo < 0) {
     strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
-    strcpy(mensajeGeneral.texto, "No se puede enviar el mensaje. Revise el destinatario");
+    strcpy(mensajeGeneral.texto, "No se pudo encontrar el grupo. Revise el destinatario");
     //responderTalker(mensajeGeneral);
     return;
   }
