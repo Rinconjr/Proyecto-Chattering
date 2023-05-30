@@ -78,7 +78,7 @@ int validar_args(int argc, char *argv[]) {
   int i_flag_cant = 0;
   int p_flag_cant = 0;
   int id = 0;
-  char *pipe_name;
+  char *pipe_name="";
 
   if (argc != 5) {
     printf("--------------------------\n");
@@ -100,7 +100,7 @@ int validar_args(int argc, char *argv[]) {
       }
       // Verificar que el argumento siguiente sea un número
       char *arg = argv[i + 1];
-      for (int j = 0; j < strlen(arg); j++) {
+      for (int j = 0; j < (int)strlen(arg); j++) {
         if (!isdigit(arg[j])) {
           printf("--------------------------\n");
           printf("Error: Debe ingresar un numero para -i\n");
@@ -163,7 +163,9 @@ bool registrar(mensaje mensajeGeneral, pid_t pid) {
   strcpy(mensajeGeneral.opcion, "registrar");
   sprintf(mensajeGeneral.texto, "%d", pid); //guarda el pid del proceso 
   
-  write(fd, &mensajeGeneral, sizeof(mensajeGeneral));
+  if(write(fd, &mensajeGeneral, sizeof(mensajeGeneral))==-1){
+    perror("Error al escribir en el pipe");
+  }
   close(fd);
   //Para preguntarle al manager si puede ingresar/
 
@@ -224,7 +226,7 @@ void recibirRespuesta(mensaje* mensajeGeneral) {
   }
 }
 
-void data_available_handler(int signum) {
+void data_available_handler() {
   printf("\n------Mensaje-Nuevo------\n");
   mensaje miMensaje;
   recibirRespuesta(&miMensaje);
@@ -266,7 +268,9 @@ int main(int argc, char *argv[]) {
     printf("Elige una opcion: ");
 
     esperaInput = 1;
-    fgets(input, sizeof(input), stdin);
+    if(fgets(input, sizeof(input), stdin)==NULL){
+      perror("Error al leer desde stdin");
+    }
     esperaInput = 0;
 
     memset(mensajeGeneral.opcion, 0, sizeof(mensajeGeneral.opcion));
@@ -311,7 +315,9 @@ int main(int argc, char *argv[]) {
       perror("Error al abrir el pipe");
       exit(1);
     }
-    write(fd, &mensajeGeneral, sizeof(mensajeGeneral));
+    if(write(fd, &mensajeGeneral, sizeof(mensajeGeneral))==-1){
+      perror("Error al escribir en el pipe");
+    }
     close(fd); 
 
     usleep(500000);
