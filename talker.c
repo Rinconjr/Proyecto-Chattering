@@ -8,7 +8,7 @@
 //
 //  Archivo creado por Juan Diego Echeverry, Santiago Yañez y Nicolás Rincón
 //  Fecha de inicio: 6/05/23
-//  Fecha de finalización:
+//  Fecha de finalización: 29/05/23
 //*****************************************************************
 
 //*****************************************************************
@@ -182,13 +182,10 @@ bool registrar(mensaje mensajeGeneral, pid_t pid) {
     perror("Error al leer del pipe");
     exit(EXIT_FAILURE);
   }
-    
-  // Mostrar el mensaje recibido
-  printf("Mensaje recibido mi pid es %s y la respuesta es: %s\n", mensajeGeneral.texto, mensajeGeneral.opcion);
 
   if(strcmp(mensajeGeneral.opcion, "0") == 0) {
     printf("-------------------------\n");
-    printf("Lo sentimos, no hay espacio que triste\n");
+    printf("Lo sentimos, no hay espacio en el chat\n");
     printf("-------------------------\n");
     exit(1);
   }
@@ -198,14 +195,13 @@ bool registrar(mensaje mensajeGeneral, pid_t pid) {
     printf("-------------------------\n");
     exit(1);
   }
-    
+  
   // Cerrar el pipe
   close(fd1);
   //RECIBIR RESPUESTA DEL MANAGER
   
   return 0;
 }
-
 
 void recibirRespuesta(mensaje* mensajeGeneral) {
   char nombrePipe[100];
@@ -226,19 +222,6 @@ void recibirRespuesta(mensaje* mensajeGeneral) {
     perror("Error al leer del pipe");
     exit(EXIT_FAILURE);
   }
-}
-
-int obtener_longitud(const char *arreglo) {
-    int longitud = 0;
-    while (arreglo[longitud] != '\0') {
-        longitud++;
-    }
-    return longitud;
-}
-
-void popOpcion(char *opt, char *opcion) {
-  sscanf(opt, "%s", opcion);
-  memmove(opt, opt + strlen(opcion) + 1, strlen(opt) - strlen(opcion));
 }
 
 void data_available_handler(int signum) {
@@ -291,7 +274,6 @@ int main(int argc, char *argv[]) {
     memset(mensajeGeneral.idRecibe, 0, sizeof(mensajeGeneral.idRecibe));
 
     sscanf(input, "%s", mensajeGeneral.opcion);
-    //printf("Opcion ingresada: %s\n", mensajeGeneral.opcion);
 
     if(strcmp(mensajeGeneral.opcion, "List") == 0){
       sscanf(input, "%*s %19s", mensajeGeneral.texto);
@@ -323,17 +305,7 @@ int main(int argc, char *argv[]) {
     else if(strcmp(mensajeGeneral.opcion, "Salir") == 0){
       continuar = 0;
     }
-    else{
-      printf("Dentro del if Salir\n");
-    }
-
-
-
-    
     sprintf(mensajeGeneral.idEnvia, "%d", id_talker);
-    
-    //printf("Texto ingresado: %s\n", mensajeGeneral.texto);
-    //printf("Id para enviar ingresado: %s\n", mensajeGeneral.idRecibe);
     fd = open(pipeGeneral, O_WRONLY);
     if(fd==-1){
       perror("Error al abrir el pipe");

@@ -7,7 +7,7 @@
 //
 //  Archivo creado por Juan Diego Echeverry, Santiago Yañez y Nicolás Rincón
 //  Fecha de inicio: 6/05/23
-//  Fecha de finalización: 
+//  Fecha de finalización: 29/05/23
 //*****************************************************************
 
 //*****************************************************************
@@ -72,9 +72,6 @@ void salir(mensaje mensajeGeneral) {
   for (int i = 0; i < cant_talkers; i++) {
     if (strcmp(listaUsuarios[i].id, mensajeGeneral.idEnvia) == 0) {
       strcpy(listaUsuarios[i].estado, "0");
-
-      //pid_t pid =listaUsuarios[i].pid;
-      //kill(pid, SIGUSR1);
     }
   }
 }
@@ -84,7 +81,7 @@ int validar_args(int argc, char *argv[]) {
   int n_flag_cant = 0;
   int p_flag_cant = 0;
   int n = 0;
-  char *pipe_name;
+  char *pipe_name = "";
 
   if (argc != 5) {
     printf("--------------------------\n");
@@ -105,7 +102,7 @@ int validar_args(int argc, char *argv[]) {
       }
       // Verificar que el argumento siguiente sea un número
       char *arg = argv[i + 1];
-      for (int j = 0; j < strlen(arg); j++) {
+      for (int j = 0; j < (int)strlen(arg); j++) {
         if (!isdigit(arg[j])) {
           printf("--------------------------\n");
           printf("Error: Debe ingresar un numero para -n\n");
@@ -194,30 +191,33 @@ int registrar(mensaje mensajeGeneral) {
   //LLENAR MENSAJE DE ENVIO
 
   //PIPE CON EL TALKER
-    // Crear el pipe no nominal
-    if (mkfifo(mensajeGeneral.texto, 0666) == -1) {
-        perror("Error al crear el pipe");
-        exit(EXIT_FAILURE);
-    }
+  // Crear el pipe no nominal
+  if (mkfifo(mensajeGeneral.texto, 0666) == -1) {
+      perror("Error al crear el pipe");
+      exit(EXIT_FAILURE);
+  }
     
-    // Abrir el pipe para escribir
-    pipe_fd = open(mensajeGeneral.texto, O_WRONLY);
-    if (pipe_fd == -1) {
-        perror("Error al abrir el pipe para escribir");
-        exit(EXIT_FAILURE);
-    }
+  // Abrir el pipe para escribir
+  pipe_fd = open(mensajeGeneral.texto, O_WRONLY);
+  if (pipe_fd == -1) {
+      perror("Error al abrir el pipe para escribir");
+      exit(EXIT_FAILURE);
+  }
     
-    // Enviar el mensaje a través del pipe
-    write(pipe_fd, &mensajeGeneral, sizeof(mensajeGeneral));
+  // Enviar el mensaje a través del pipe
+  if(write(pipe_fd, &mensajeGeneral, sizeof(mensajeGeneral))==-1){
+    perror("Error al escribir en el pipe");
+  }
     
-    // Cerrar el pipe
-    close(pipe_fd);
+  // Cerrar el pipe
+  close(pipe_fd);
     
-    // Eliminar (unlink) el pipe
-    if (unlink(mensajeGeneral.texto) == -1) {
-        perror("Error al eliminar el pipe");
-        exit(EXIT_FAILURE);
-    }
+  // Eliminar (unlink) el pipe
+  if (unlink(mensajeGeneral.texto) == -1) {
+      perror("Error al eliminar el pipe");
+      exit(EXIT_FAILURE);
+  }
+  
   //PIPE CON EL TALKER
   printf("---------Mensaje-Enviado------\n");
   printf("IdEnvia: %s\n", mensajeGeneral.idEnvia);
@@ -226,8 +226,7 @@ int registrar(mensaje mensajeGeneral) {
   printf("Texto: %s\n", mensajeGeneral.texto);
   printf("---------------------------------------------------\n");
 
-  
-    return 0;
+  return 0;
 }
 
 void responderTalker(mensaje mensajeGeneral) {
@@ -253,26 +252,29 @@ void responderTalker(mensaje mensajeGeneral) {
   kill(receptor_pid, SIG_DATA_AVAILABLE);
   
   //PIPE CON EL TALKER
-    // Crear el pipe no nominal
-    if (mkfifo(pipeRegreso, 0666) == -1) {
-        perror("Error al crear el pipe");
-        exit(EXIT_FAILURE);
-    }
+  // Crear el pipe no nominal
+  if (mkfifo(pipeRegreso, 0666) == -1) {
+    perror("Error al crear el pipe");
+    exit(EXIT_FAILURE);
+  }
     
-    // Abrir el pipe para escribir y enviar
-    pipe_fd = open(pipeRegreso, O_WRONLY);
-    if (pipe_fd == -1) {
-      perror("Error al abrir el pipe para escribir");
-      exit(EXIT_FAILURE);
-    }
-    write(pipe_fd, &mensajeGeneral, sizeof(mensajeGeneral));
-    close(pipe_fd);
+  // Abrir el pipe para escribir y enviar
+  pipe_fd = open(pipeRegreso, O_WRONLY);
+  if (pipe_fd == -1) {
+    perror("Error al abrir el pipe para escribir");
+    exit(EXIT_FAILURE);
+  }
+if(write(pipe_fd, &mensajeGeneral, sizeof(mensajeGeneral))==-1){
+  perror("Error al escribir en el pipe");
+}
+  
+  close(pipe_fd);
     
-    // Eliminar (unlink) el pipe
-    if (unlink(pipeRegreso) == -1) {
-        perror("Error al eliminar el pipe");
-        exit(EXIT_FAILURE);
-    }
+  // Eliminar (unlink) el pipe
+  if (unlink(pipeRegreso) == -1) {
+    perror("Error al eliminar el pipe");
+    exit(EXIT_FAILURE);
+  }
   //PIPE CON EL TALKER
 
   printf("---------Mensaje enviado------\n");
@@ -283,8 +285,8 @@ void responderTalker(mensaje mensajeGeneral) {
   printf("---------------------------------------------------\n");
 }
 
-//Funcion Group (crea un grupo con los usuarios que se pasen por parametro) (falta hacerlo)
-void crearGrupo(mensaje mensajeGeneral) { //Falta validar que no se puede crear el grupo con un usuario inexistente
+//Funcion Group (crea un grupo con los usuarios que se pasen por parametro)
+void crearGrupo(mensaje mensajeGeneral) { 
   int count = 0;
   int existe = 0;
   char *token = strtok(mensajeGeneral.texto, ", ");
@@ -344,7 +346,7 @@ void crearGrupo(mensaje mensajeGeneral) { //Falta validar que no se puede crear 
   responderTalker(mensajeGeneral); 
 }
 
-//Funcion list GID (Listar integrantes de un grupo dado el id del grupo) (falta hacerlo)
+//Funcion list GID (Listar integrantes de un grupo dado el id del grupo)
 void listarGrupo(mensaje mensajeGeneral) {
   int buscarGrupo;
   strcpy(mensajeGeneral.idRecibe, mensajeGeneral.idEnvia);
@@ -391,9 +393,8 @@ void listarGrupo(mensaje mensajeGeneral) {
   }
 }
 
-//Funcion list (Listar usuarios conectados) (falta hacerlo)
+//Funcion list (Listar usuarios conectados)
 void listarUsuarios(mensaje mensajeGeneral) {
-  char numeroComoCadena[20];
   strcpy(mensajeGeneral.opcion, "RListar");
   strcpy(mensajeGeneral.texto, "Los usuarios actualmente en el sistema son: ");
   
@@ -440,7 +441,7 @@ int obtener_longitud(const char *arreglo) {
 
   //sent msg Idi (Enviar mensaje al talker con id N) (falta hacerlo)
 void MsgUsuario(mensaje mensajeGeneral) {
-  char tmpText[100] = "Mensaje directo de usuario ";
+  char tmpText[100] = "Mensaje del Usuario ";
   strcat(tmpText, mensajeGeneral.idEnvia);
   strcat(tmpText, ": ");
 
@@ -484,18 +485,22 @@ void MsgUsuario(mensaje mensajeGeneral) {
 }
 
 int esNumerico(const char *cadena) {
-    int i = 0;
-    while (cadena[i] != '\0') {
-        if (!isdigit(cadena[i])) {
-            return 0;  // No es un dígito
-        }
-        i++;
-    }
-    return 1;
+  int i = 0;
+  while (cadena[i] != '\0') {
+      if (!isdigit(cadena[i])) {
+          return 0;  // No es un dígito
+      }
+      i++;
+  }
+  return 1;
 }
 
 //sent msg GroupIdi (Enviar mensaje al grupo de id n) (falta hacerlo)
 void MsgGrupo(mensaje mensajeGeneral) {
+  char tmpText[100] = "Mensaje del Usuario ";
+  strcat(tmpText, mensajeGeneral.idEnvia);
+  strcat(tmpText, ": ");
+  
   int buscarGrupo;
   //Validar que la primera letra es una G y el resto numeros
   if (mensajeGeneral.idRecibe[0] == 'G') {
@@ -529,6 +534,8 @@ void MsgGrupo(mensaje mensajeGeneral) {
 
  //Responder a talkers
   else {
+    strcat(tmpText, mensajeGeneral.texto);
+    strcpy(mensajeGeneral.texto, tmpText);
     for(int e = 0; e <listaGrupos[buscarGrupo-1].numeroUsuarios; e++) {
       sprintf(mensajeGeneral.idRecibe, "%d", listaGrupos[buscarGrupo-1].idUsuarios[e]);
       responderTalker(mensajeGeneral);
@@ -539,7 +546,6 @@ void MsgGrupo(mensaje mensajeGeneral) {
 int main(int argc, char *argv[])
 { 
   int fd;
-  char opcion[100];
   mensaje mensajeGeneral;
   
   //Se validan los argumentos
@@ -559,7 +565,9 @@ int main(int argc, char *argv[])
     if(fd==-1){
       perror("Error al abrir el pipe)");
     }
-    read(fd,&mensajeGeneral,sizeof(mensaje));
+    if(read(fd,&mensajeGeneral,sizeof(mensaje)) == -1){
+      perror("Error al leer desde el fd");
+    };
     close(fd);
 
     printf("\n---------------------------------------------------\n");
