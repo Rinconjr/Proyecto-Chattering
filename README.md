@@ -8,7 +8,7 @@ Sistema Chattering con arquitectura Cliente/Servidor en la cual hay un proceso S
 
 * **Manager:** Registrara la información de clientes y grupos en el sistema y será intermediario para la comunicación entre los diferentes talkers.
 
-Este proyecto esta basado en **pipes nominales y señales** utilizando llamadas al sistema operativo.
+Este proyecto esta basado en **pipes nominales y señales** utilizando llamadas al sistema operativo para su manejo.
 
 **Compilacion:**
 * Manager:
